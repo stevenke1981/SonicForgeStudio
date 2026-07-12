@@ -1,0 +1,11 @@
+[package]
+name = "sonicforge-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sonicforge-core = { path = "../../crates/sonicforge-core" }
+
+[lints]
+workspace = true

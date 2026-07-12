@@ -1,0 +1,44 @@
+name: Release Builds
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x64
+            os: windows-latest
+          - platform: ubuntu-x64
+            os: ubuntu-latest
+          - platform: macos-x64
+            os: macos-13
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release workspace
+        run: cargo build --release --workspace
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonicforge-${{ matrix.platform }}-${{ github.sha }}
+          path: target/release/sonicforge-cli*
+          if-no-files-found: error

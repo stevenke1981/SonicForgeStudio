@@ -1,0 +1,214 @@
+[
+  {
+    "path": ".gitignore",
+    "bytes": 120
+  },
+  {
+    "path": "apps/cli/Cargo.toml",
+    "bytes": 211
+  },
+  {
+    "path": "apps/cli/src/main.rs",
+    "bytes": 1503
+  },
+  {
+    "path": "apps/cli/tests/demo_smoke.rs",
+    "bytes": 2063
+  },
+  {
+    "path": "artifacts/.gitkeep",
+    "bytes": 0
+  },
+  {
+    "path": "crates/sonicforge-core/Cargo.toml",
+    "bytes": 136
+  },
+  {
+    "path": "crates/sonicforge-core/src/lib.rs",
+    "bytes": 507
+  },
+  {
+    "path": "crates/sonicforge-core/src/project.rs",
+    "bytes": 3401
+  },
+  {
+    "path": "crates/sonicforge-core/src/render.rs",
+    "bytes": 9366
+  },
+  {
+    "path": "crates/sonicforge-core/src/sequence.rs",
+    "bytes": 2251
+  },
+  {
+    "path": "crates/sonicforge-core/src/synth.rs",
+    "bytes": 2148
+  },
+  {
+    "path": "crates/sonicforge-core/src/wav.rs",
+    "bytes": 3259
+  },
+  {
+    "path": "docs/acceptance-checklist.md",
+    "bytes": 723
+  },
+  {
+    "path": "docs/ADR-0001-clean-room.md",
+    "bytes": 551
+  },
+  {
+    "path": "docs/ADR-0002-tauri-rust-engine.md",
+    "bytes": 640
+  },
+  {
+    "path": "prompts/START_CODEX.md",
+    "bytes": 695
+  },
+  {
+    "path": "prompts/START_OPENCODE.md",
+    "bytes": 584
+  },
+  {
+    "path": "prototype/ui-mockup.html",
+    "bytes": 6384
+  },
+  {
+    "path": "schemas/project-v1.schema.json",
+    "bytes": 1406
+  },
+  {
+    "path": "schemas/recipe-v1.schema.json",
+    "bytes": 1213
+  },
+  {
+    "path": "scripts/build-release.ps1",
+    "bytes": 1020
+  },
+  {
+    "path": "scripts/build-release.sh",
+    "bytes": 613
+  },
+  {
+    "path": "scripts/check.ps1",
+    "bytes": 649
+  },
+  {
+    "path": "scripts/check.sh",
+    "bytes": 532
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "bytes": 943
+  },
+  {
+    "path": "scripts/package.ps1",
+    "bytes": 411
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "bytes": 1006
+  },
+  {
+    "path": "todos.md",
+    "bytes": 5349
+  },
+  {
+    "path": "AGENTS.md",
+    "bytes": 2427
+  },
+  {
+    "path": "architecture.md",
+    "bytes": 4161
+  },
+  {
+    "path": "audio-engine.md",
+    "bytes": 3259
+  },
+  {
+    "path": "BUILD_VERIFICATION.md",
+    "bytes": 2413
+  },
+  {
+    "path": "Cargo.lock",
+    "bytes": 253
+  },
+  {
+    "path": "Cargo.toml",
+    "bytes": 290
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "bytes": 780
+  },
+  {
+    "path": "FILE_MANIFEST.json",
+    "bytes": 3509
+  },
+  {
+    "path": "final.md",
+    "bytes": 4016
+  },
+  {
+    "path": "LICENSE",
+    "bytes": 1087
+  },
+  {
+    "path": "MODEL_ROUTING.md",
+    "bytes": 719
+  },
+  {
+    "path": "plan.md",
+    "bytes": 5234
+  },
+  {
+    "path": "project-format.md",
+    "bytes": 2144
+  },
+  {
+    "path": "README.md",
+    "bytes": 2928
+  },
+  {
+    "path": "references.md",
+    "bytes": 611
+  },
+  {
+    "path": "risk-register.md",
+    "bytes": 1348
+  },
+  {
+    "path": "roadmap.md",
+    "bytes": 805
+  },
+  {
+    "path": "rust-toolchain.toml",
+    "bytes": 86
+  },
+  {
+    "path": "security.md",
+    "bytes": 1523
+  },
+  {
+    "path": "spec.md",
+    "bytes": 7844
+  },
+  {
+    "path": "TEAM.md",
+    "bytes": 1080
+  },
+  {
+    "path": "test.md",
+    "bytes": 5020
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "bytes": 669
+  },
+  {
+    "path": "ui-design.md",
+    "bytes": 3544
+  },
+  {
+    "path": "scripts/package.sh",
+    "bytes": 381
+  }
+]

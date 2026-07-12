@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sonicforge.local/schema/project-v1.json",
+  "title": "SonicForge Project v1",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "sample_rate",
+    "ppq",
+    "tempo_map",
+    "tracks"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "sample_rate": {
+      "type": "integer",
+      "minimum": 8000,
+      "maximum": 192000
+    },
+    "ppq": {
+      "type": "integer",
+      "minimum": 24,
+      "maximum": 15360
+    },
+    "tempo_map": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "tick",
+          "bpm"
+        ],
+        "properties": {
+          "tick": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bpm": {
+            "type": "number",
+            "minimum": 20,
+            "maximum": 400
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "maxItems": 4096
+    },
+    "patterns": {
+      "type": "array"
+    },
+    "devices": {
+      "type": "array"
+    },
+    "automation": {
+      "type": "array"
+    },
+    "assets": {
+      "type": "array",
+      "maxItems": 100000
+    }
+  },
+  "additionalProperties": true
+}

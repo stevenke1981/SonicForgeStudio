@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust with required components
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run workspace tests
+        run: cargo test --workspace
+
+      - name: Prepare demo output directory
+        run: mkdir -p artifacts
+
+      - name: Run CLI demo smoke test
+        run: cargo run -p sonicforge-cli -- demo artifacts/demo.wav
+
+      - name: Upload demo WAV
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonicforge-ci-demo
+          path: artifacts/demo.wav
+          if-no-files-found: error

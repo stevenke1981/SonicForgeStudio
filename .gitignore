@@ -1,0 +1,10 @@
+/target/
+/dist/
+/artifacts/*
+!/artifacts/.gitkeep
+.codebase-memory/
+.opencode/
+/node_modules/
+*.log
+.DS_Store
+Thumbs.db
