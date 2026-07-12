@@ -6,7 +6,7 @@
 
 - Product：SonicForge Studio
 - Version：0.1.0
-- Commit：待 Git 初始化與提交後填入
+- Commit：`a880a73`（baseline implementation；本文件後續為驗收紀錄同步）
 - Build date：2026-07-13
 - Rust：stable，`cargo/rustc 1.94.1`
 - Target platforms：Windows 本機驗證；CI workflow 定義 Windows x64、Ubuntu x64、macOS x64
