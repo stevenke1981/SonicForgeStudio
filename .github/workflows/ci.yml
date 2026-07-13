@@ -12,11 +12,15 @@ env:
 
 jobs:
   rust:
-    name: Rust checks
-    runs-on: ubuntu-latest
+    name: Rust checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install stable Rust with required components
         uses: dtolnay/rust-toolchain@stable
@@ -33,13 +37,20 @@ jobs:
         run: cargo test --workspace
 
       - name: Prepare demo output directory
+        if: runner.os != 'Windows'
         run: mkdir -p artifacts
+
+      - name: Prepare demo output directory on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path artifacts -Force | Out-Null
 
       - name: Run CLI demo smoke test
         run: cargo run -p sonicforge-cli -- demo artifacts/demo.wav
 
       - name: Upload demo WAV
-        uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
         with:
           name: sonicforge-ci-demo
           path: artifacts/demo.wav
@@ -53,35 +64,60 @@ jobs:
         working-directory: apps/desktop
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/desktop/package.json
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: apps/desktop/pnpm-lock.yaml
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install frontend dependencies
-        run: corepack pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Tauri Linux dependencies
+        working-directory: ${{ github.workspace }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install stable Rust with required components
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check Tauri Rust formatting
+        working-directory: apps/desktop/src-tauri
+        run: cargo fmt --all --check
+
+      - name: Run Tauri Rust Clippy
+        working-directory: apps/desktop/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Tauri Rust tests
+        working-directory: apps/desktop/src-tauri
+        run: cargo test
 
       - name: Lint frontend
-        run: corepack pnpm lint
+        run: pnpm lint
 
       - name: Typecheck frontend
-        run: corepack pnpm typecheck
+        run: pnpm typecheck
 
       - name: Run frontend unit tests
-        run: corepack pnpm test
+        run: pnpm test
 
       - name: Build frontend
-        run: corepack pnpm build
+        run: pnpm build
 
       - name: Install Playwright Chromium
-        run: corepack pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run browser acceptance tests
-        run: corepack pnpm exec playwright test
+        run: pnpm exec playwright test

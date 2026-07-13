@@ -28,6 +28,17 @@ pnpm build
 pnpm playwright test
 ```
 
+Tauri desktop crate 為獨立 workspace，亦為必要 Gate：
+
+```bash
+cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
+cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+cargo tauri build --bundles nsis
+```
+
+Release 前另須驗證 `.sfsproj` save/load deep round-trip、範本載入後 ID 唯一性、儲存競態 dirty flag、四種語系、DPR 與 UI scale 100/125/150/200% 的獨立組合，以及 installer SHA-256 / Authenticode 狀態。
+
 ## 3. 單元測試
 
 ### 時間與節拍

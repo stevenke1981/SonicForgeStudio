@@ -1,12 +1,43 @@
 # SonicForge Studio — 最終交付與驗收紀錄
 
+## 0. Desktop 0.1.0 release slice（最新交付）
+
+本節為目前狀態；後續章節保留早期 M0 / GUI vertical-slice 歷史紀錄，其「尚未實作」描述若與本節衝突，以本節及 `BUILD_VERIFICATION.md` 最新段落為準。
+
+已交付：
+
+- 完整 schema v1 project model、`.sfsproj` manifest/project JSON、migration boundary、golden/round-trip tests 與原子儲存。
+- CPAL/WASAPI 裝置列舉與即時 test-tone stream、xrun/device-lost 狀態；Tauri save/load/list/audio IPC。
+- Piano Roll、專案 save/save-as/load/autosave、100–200% DPI、英文／繁中／日文／韓文介面。
+- 五個不含第三方音訊素材的起始範本：空白、小星星（公版旋律）、四拍鼓組、chiptune、SFX starter。
+- Windows NSIS installer；`v*` tag GitHub Release 包含三平台 CLI archives、NSIS 與 SHA256SUMS。
+
+未宣告完成：完整 transport/DSP graph playback、MIDI、undo/redo、Step Sequencer、autosave journal/crash recovery、macOS notarization。Windows 簽章 pipeline 已接好，但目前沒有 PFX secrets，因此本次 installer 會如實標記為未簽章。
+
+### 最新本機驗收證據
+
+| Gate | 結果 |
+|---|---|
+| Rust workspace fmt / Clippy `-D warnings` / tests | 通過；27 tests |
+| Tauri crate fmt / Clippy `-D warnings` / tests | 通過；2 tests |
+| Frontend lint / typecheck / Vitest / production build | 通過；21 tests |
+| Playwright DPI、Piano Roll、project/audio、多語系／範本 | 通過；24 tests |
+| `scripts/check.ps1` / `scripts/build-release.ps1` | 通過 |
+| `cargo tauri build --bundles nsis` | 通過 |
+
+| Windows 產物 | Bytes | SHA-256 | Authenticode |
+|---|---:|---|---|
+| `SonicForge Studio_0.1.0_x64-setup.exe` | 2,214,948 | `FBEB27A6A4EA1B3ECA7BE22C5DE07DAAEAFD3BF7BB513F08053A7F7D6DACA2F9` | `NotSigned` |
+| `sonicforge-desktop.exe` | 9,584,640 | `4FE99DEA0FB8F46789A41E603A22987A2FC304F653A41B469854BDA7B1012598` | `NotSigned` |
+| `sonicforge-cli-windows-x86_64.exe` | 186,368 | `95B15E2C1C9E5811483BAFCEA2FE6FB336CEC4947547D0B583A529FC530A4EC5` | `NotSigned` |
+
 > 本次交付包含 M0 Rust headless 音訊原型、WAV smoke、CI / release workflow，以及可驗收的 Tauri 2 + React GUI vertical slice；不是完整 DAW 產品宣告。
 
 ## 1. 版本資訊
 
 - Product：SonicForge Studio
 - Version：0.1.0
-- Commit：推送後的 `main` HEAD（baseline 與 GUI delivery 皆可由 `git log --oneline` 追溯）
+- Commit：見本輪最終 `main` HEAD 與 `v0.1.0` tag
 - Build date：2026-07-13
 - Rust：stable，`cargo/rustc 1.94.1`
 - Target platforms：Windows 本機驗證；CI workflow 定義 Windows x64、Ubuntu x64、macOS x64

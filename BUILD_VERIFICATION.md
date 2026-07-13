@@ -1,5 +1,44 @@
 # 建置驗證狀態
 
+## Desktop 0.1.0 release slice（2026-07-13，最新）
+
+本節取代下方舊的 M0 / GUI vertical-slice 未完成敘述；下方內容僅保留作為早期 baseline 紀錄。
+
+### 已完成範圍
+
+- Rust schema v1 project model，以及受限 ZIP `.sfsproj` 的 `manifest.json` / `project.json`、golden test、原子儲存與 round-trip。
+- CPAL Windows/WASAPI 輸出裝置列舉、即時 test-tone stream、xrun 與 device-lost 狀態；callback 維持無配置、無鎖、無 blocking、無 I/O、無 panic。
+- Tauri IPC：專案 save/load/list 與音訊 device/start/stop/status；Project model 不依賴 Tauri / React。
+- Piano Roll note draw/select/erase/resize、velocity、quantize、transpose、duplicate、legato、ghost notes 與 scale highlight。
+- 英文、繁體中文、日文、韓文介面；空白、小星星、四拍鼓組、chiptune、SFX starter 五個範本。
+- Playwright 分離覆蓋 DPR 與 UI 100/125/150/200% scale。
+- Windows NSIS installer；tag-only release workflow 同時封裝三平台 CLI、installer 與 SHA256SUMS。
+
+### Release 邊界
+
+- 本機 NSIS 可重現建置，但目前沒有 PFX secrets，因此 Authenticode 狀態為 `NotSigned`。
+- GitHub `release-signing` Environment 僅允許 `v*` tag；加入 `WINDOWS_CERTIFICATE` 與 `WINDOWS_CERTIFICATE_PASSWORD` 後 workflow 才會簽章。
+- 完整 transport/DSP graph playback、MIDI、undo/redo、Step Sequencer、autosave journal/crash recovery 與 macOS notarization仍屬後續里程碑。
+
+### 最新驗證命令
+
+```powershell
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
+cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+corepack pnpm --dir apps/desktop lint
+corepack pnpm --dir apps/desktop typecheck
+corepack pnpm --dir apps/desktop test
+corepack pnpm --dir apps/desktop build
+corepack pnpm --dir apps/desktop exec playwright test
+Push-Location apps/desktop; cargo tauri build --bundles nsis; Pop-Location
+```
+
+最後一次 clean verification：Rust workspace 27 tests、Tauri 2 tests、frontend 21 tests、Playwright 24 tests，全數通過。NSIS installer 為 2,214,948 bytes，SHA-256 `FBEB27A6A4EA1B3ECA7BE22C5DE07DAAEAFD3BF7BB513F08053A7F7D6DACA2F9`，Authenticode `NotSigned`；完整產物表見 `final.md`。
+
 ## M0 baseline（2026-07-13）
 
 本輪驗收範圍包含 Rust headless prototype 與 Tauri 2 + React GUI vertical slice：核心資料驗證、deterministic offline render、stereo PCM16 WAV smoke、前端驗收、Tauri release build、CI workflow 與跨平台 release workflow。完整 real-time CPAL engine 與其餘里程碑仍未宣告完成。

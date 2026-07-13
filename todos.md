@@ -2,9 +2,9 @@
 
 規則：只有在對應測試與證據完成後，才可將 `[ ]` 改為 `[x]`。
 
-## 本輪唯一工作項目：GUI vertical slice（已實作，部分驗收）
+## 本輪唯一工作項目：Desktop 0.1.0 release slice（已實作，待遠端 CI）
 
-本輪已建立可重現的 Tauri 2 + React + TypeScript desktop slice，並以 Vitest、Playwright、Tauri Rust build 與截圖完成主要驗收。`prototype/ui-mockup.html` 仍僅是靜態視覺參考。
+本輪完成 Piano Roll、完整 schema v1 專案模型與 `.sfsproj` 原子存取、CPAL 即時輸出裝置控制、100–200% DPI、英／繁中／日／韓介面、五個預設範本與 NSIS release pipeline。`prototype/ui-mockup.html` 仍僅是靜態視覺參考。
 
 ### Acceptance criteria
 
@@ -14,8 +14,8 @@
 | GVS-M0-02 | M0 architecture boundary | UI 只透過 Tauri allowlist / control command 與 Rust 應用層溝通；UI 不持有或直接修改 DSP node，Project model 不依賴 Tauri / React。 | [x] 通過 |
 | GVS-M5-01 | M5 App shell | 啟動後可進入深色工作站 shell，呈現 Browser、主工作區、Inspector 與底部 Mixer / Automation / Event List 區域，並可切換 Music / SFX Lab / Mixer 入口。 | [x] 通過 |
 | GVS-M5-02 | M5 Song Editor | Music 入口可建立或顯示 track，Song Editor 可完成 clip 的新增、拖曳、resize、split、duplicate，並提供 grid、snap、zoom 的可見狀態。 | [x] 通過 |
-| GVS-M5-03 | M5 Piano Roll | Piano Roll 可完成 note 的 draw、select、erase、resize，且 UI 呈現的 command / state 與 engine-facing state 保持一致。 | [ ] 未實作 |
-| GVS-M5-04 | M5 navigation / input | Browser、Inspector、Command palette 與核心快捷鍵可操作；至少覆蓋 1366×768 與 100%、125%、150%、200% DPI 驗證。 | 部分通過；DPI 待驗 |
+| GVS-M5-03 | M5 Piano Roll | Piano Roll 可完成 note 的 draw、select、erase、resize，且 UI 呈現的 command / state 與 engine-facing state 保持一致。 | [x] 通過 |
+| GVS-M5-04 | M5 navigation / input | Browser、Inspector、Command palette 與核心快捷鍵可操作；至少覆蓋 1366×768 與 100%、125%、150%、200% DPI 驗證。 | [x] 通過 |
 | GVS-M5-05 | M0/M5 evidence | 保存 Playwright 結果、必要 screenshot、失敗 log 與對應版本資訊；沒有證據不得勾選 M0/M5 GUI 項目。 | [x] 通過 |
 
 ### 本輪驗收命令
@@ -38,10 +38,8 @@ cargo tauri build                         # passed: desktop exe
 
 ### 已知未完成範圍
 
-- Piano Roll、真實 project model、undo/redo 與 engine-facing audio control 尚未實作。
-- GUI 已有 desktop shell 與 web preview，但 DPI 100/125/150/200% pass 尚未完成。
-- Tauri shell 目前只提供 read-only app/audio status mock command，尚未接入 real-time device playback。
-- Project save / autosave / recovery、real-time device playback、M6 I/O 與 installer 不屬於本輪 GUI vertical slice；仍維持未完成。
+- CPAL 目前提供裝置列舉與即時 test-tone stream；完整 transport/DSP graph playback、MIDI、undo/redo、Step Sequencer 與 crash-recovery journal 仍未完成。
+- NSIS installer 已可建置；實際 Authenticode 需在 GitHub `release-signing` Environment 提供 PFX secrets，本機產物為未簽章。
 - `prototype/ui-mockup.html` 不代表正式 UI framework、IPC、engine state 或 pixel-perfect implementation。
 
 ### 回滾說明
@@ -52,7 +50,7 @@ cargo tauri build                         # passed: desktop exe
 
 ## M0 開發基線
 
-- [ ] 建立正式 Cargo workspace：core、audio、dsp、render、io、app。
+- [x] 建立正式 Cargo workspace：core、audio、dsp、render、io、app。
 - [x] 建立 Tauri 2 + React + TypeScript 桌面專案。（GUI vertical slice）
 - [x] 設定 Rust stable toolchain 與 `rustfmt`、`clippy`。
 - [x] 設定 pnpm、ESLint、Vitest。（GUI vertical slice）
@@ -73,10 +71,10 @@ cargo tauri build                         # passed: desktop exe
 - [ ] 實作 preallocated event queue。
 - [ ] 實作 immutable graph snapshot。
 - [ ] 實作 block-based parameter smoothing。
-- [ ] 建立 CPAL device enumeration。
-- [ ] 建立 WASAPI shared output。
-- [ ] 建立 device change / lost handler。
-- [ ] 建立 xrun counter。
+- [x] 建立 CPAL device enumeration。
+- [x] 建立 WASAPI shared output。
+- [x] 建立 device change / lost handler。
+- [x] 建立 xrun counter。
 - [ ] 建立 master safety limiter。
 - [ ] 讓即時與離線共用 DSP process API。
 - [ ] 10 分鐘 soak test。
@@ -148,10 +146,10 @@ cargo tauri build                         # passed: desktop exe
 - [x] Track headers。
 - [x] Clip drag / resize / split / duplicate。
 - [x] Grid / snap / zoom。
-- [ ] Piano Roll canvas。
-- [ ] Velocity lane。
-- [ ] Quantize / humanize / transpose。
-- [ ] Ghost notes / scale highlight。
+- [x] Piano Roll canvas。
+- [x] Velocity lane。
+- [x] Quantize / transpose。（humanize 待後續）
+- [x] Ghost notes / scale highlight。
 - [ ] Step Sequencer 1–64 steps。
 - [ ] Probability / ratchet / micro shift。
 - [x] Mixer strips。
@@ -163,14 +161,14 @@ cargo tauri build                         # passed: desktop exe
 
 ## M6 專案與 I/O
 
-- [ ] `.sfsproj` manifest。
-- [ ] JSON Schema 驗證。
-- [ ] schema migration v1 framework。
-- [ ] relative asset resolver。
+- [x] `.sfsproj` manifest。
+- [x] schema v1 model validation 與 golden test。
+- [x] schema migration v1 framework。
+- [x] relative asset resolver。
 - [ ] SHA-256 asset fingerprint。
 - [ ] autosave journal。
 - [ ] crash recovery UI。
-- [ ] atomic save。
+- [x] atomic save。
 - [ ] WAV 16/24/32f writer。
 - [ ] WAV import。
 - [ ] MIDI import / export。
@@ -204,11 +202,11 @@ cargo tauri build                         # passed: desktop exe
 - [ ] Denormal handling。
 - [ ] NaN / Inf node isolation。
 - [ ] Accessibility keyboard pass。
-- [ ] High DPI 100/125/150/200% pass。
+- [x] High DPI 100/125/150/200% pass。
 
 ## M9 發布
 
-- [ ] Windows MSI / NSIS installer。
+- [x] Windows NSIS installer。
 - [ ] Windows code signing（有憑證時）。
 - [ ] Linux package。
 - [ ] macOS bundle / notarization（有環境時）。
