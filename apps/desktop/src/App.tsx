@@ -4,18 +4,33 @@ import type { DragEvent } from "react";
 import { AudioSettingsDialog } from "./components/AudioSettingsDialog";
 import { PianoRoll } from "./components/PianoRoll";
 import { ProjectControls } from "./components/ProjectControls";
+import { StepSequencer } from "./components/StepSequencer";
+import { createDefaultStepPattern } from "./components/stepSequencerModel";
+import type { StepPattern } from "./components/stepSequencerModel";
 import { TemplateGallery } from "./components/TemplateGallery";
 import { I18nProvider, localeDisplayNames, locales, useI18n, useTranslation } from "./i18n";
 import type { Locale } from "./i18n";
-import { createDemoProject, loadDesktopState } from "./lib/tauri";
+import { BoundedHistory } from "./lib/history";
+import {
+  createDemoProject,
+  loadDesktopState,
+  recoverProject,
+  startTransport,
+  transportPause,
+  transportPlay,
+  transportStop,
+  writeRecoveryJournal,
+} from "./lib/tauri";
 import { initialPianoNotes } from "./lib/pianoRoll";
 import type { PianoNote } from "./lib/pianoRoll";
 import type { AudioStatus, DesktopState, Project, ProjectTrack, Waveform } from "./lib/tauri";
 import "./styles.css";
 
 type Mode = "Music" | "SFX Lab" | "Mixer";
-type MusicView = "Song Editor" | "Piano Roll";
+type MusicView = "Song Editor" | "Piano Roll" | "Step Sequencer";
 type UiScale = 100 | 125 | 150 | 200;
+
+type TransportCommand = "play" | "pause" | "stop";
 
 type Clip = {
   id: number;
@@ -129,6 +144,23 @@ function projectNoteFromPiano(note: PianoNote, baseNotes: ProjectTrack["pattern"
   };
 }
 
+function notesFromStepPattern(pattern: StepPattern, bpm: number): ProjectTrack["pattern"]["notes"] {
+  const stepBeats = 4 / Math.max(1, pattern.length);
+  const millisecondsPerBeat = 60_000 / Math.max(20, bpm);
+  return pattern.steps.slice(0, pattern.length).flatMap((step, index) => {
+    if (!step.enabled || step.probability <= 0) return [];
+    const ratchet = Math.max(1, Math.min(4, step.ratchet));
+    const ratchetBeats = stepBeats / ratchet;
+    const velocity = (step.velocity / 127) * (step.probability / 100);
+    return Array.from({ length: ratchet }, (_, repeat) => ({
+      startBeat: Math.max(0, index * stepBeats + repeat * ratchetBeats + (step.microShift / millisecondsPerBeat)),
+      lengthBeats: Math.max(0.03, ratchetBeats * 0.85),
+      midiNote: 36,
+      velocity,
+    }));
+  });
+}
+
 function clipStartTick(left: number, ppq: number): number {
   return Math.max(0, Math.round((left / 64) * ppq));
 }
@@ -153,13 +185,15 @@ function uniqueClipModelId(tracks: Track[], track: Track, numericId: number): st
   return candidate;
 }
 
-function buildProjectSnapshot(base: Project, bpm: number, tracks: Track[], pianoNotes: PianoNote[]): Project {
+function buildProjectSnapshot(base: Project, bpm: number, tracks: Track[], pianoNotes: PianoNote[], stepPattern?: StepPattern): Project {
   const projectTracks: ProjectTrack[] = tracks.map((track, index) => {
     const baseTrack = (track.modelId ? base.tracks.find((item) => item.id === track.modelId) : undefined) ?? base.tracks[index];
     const modelTrackId = track.modelId ?? baseTrack?.id ?? `track-${track.id}`;
     const basePattern = baseTrack?.pattern;
     const notes = index === 0
       ? pianoNotes.map((note) => projectNoteFromPiano(note, basePattern?.notes ?? []))
+      : index === 1 && stepPattern
+        ? notesFromStepPattern(stepPattern, bpm)
       : (basePattern?.notes ?? []);
     const requiredPatternLength = notes.reduce((maximum, note) => Math.max(maximum, note.startBeat + note.lengthBeats), 0);
     return {
@@ -231,11 +265,16 @@ function usesNativeSpaceKey(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest("input, select, button, textarea, [contenteditable]") !== null;
 }
 
+function usesNativeHistoryKey(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("input, select, textarea, [contenteditable]") !== null;
+}
+
 function AppContent() {
   const { locale, setLocale, t } = useI18n();
   const [mode, setMode] = useState<Mode>("Music");
   const [musicView, setMusicView] = useState<MusicView>("Song Editor");
   const [playing, setPlaying] = useState(false);
+  const [transportPrepared, setTransportPrepared] = useState(false);
   const [bpm, setBpm] = useState(120);
   const [tracks, setTracks] = useState<Track[]>(initialTracks);
   const [selectedTrackId, setSelectedTrackId] = useState(1);
@@ -254,6 +293,9 @@ function AppContent() {
   const [projectBase, setProjectBase] = useState<Project>(() => createDemoProject());
   const [pianoNotes, setPianoNotes] = useState<PianoNote[]>(initialPianoNotes);
   const [projectLoadVersion, setProjectLoadVersion] = useState(0);
+  const defaultStepPattern = useMemo(() => createDefaultStepPattern(16), []);
+  const [stepPattern, setStepPattern] = useState<StepPattern>(defaultStepPattern);
+  const stepHistory = useRef(new BoundedHistory<StepPattern>(defaultStepPattern, 200));
   const [desktop, setDesktop] = useState<DesktopState>({
     appInfo: {
       name: "SonicForge Studio",
@@ -264,6 +306,33 @@ function AppContent() {
     audioStatus: fallbackAudio,
   });
   const nextClipId = useRef(nextClipNumericId(initialTracks));
+
+  const announce = useCallback((message: string) => {
+    setToast(message);
+  }, []);
+
+  const applyStepPattern = useCallback((nextPattern: StepPattern, description: string) => {
+    stepHistory.current.push(nextPattern);
+    setStepPattern(nextPattern);
+    setDirty(true);
+    announce(description);
+  }, [announce]);
+
+  const undoStepPattern = useCallback(() => {
+    const previous = stepHistory.current.undo();
+    if (previous === undefined) return;
+    setStepPattern(previous);
+    setDirty(stepHistory.current.canUndo);
+    announce("Step change undone");
+  }, [announce]);
+
+  const redoStepPattern = useCallback(() => {
+    const next = stepHistory.current.redo();
+    if (next === undefined) return;
+    setStepPattern(next);
+    setDirty(true);
+    announce("Step change redone");
+  }, [announce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -284,21 +353,6 @@ function AppContent() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setCommandPaletteOpen(true);
-      }
-      if (event.code === "Space" && !usesNativeSpaceKey(event.target)) {
-        event.preventDefault();
-        setPlaying((value) => !value);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   const selectedTrack = useMemo(
     () => tracks.find((track) => track.id === selectedTrackId) ?? tracks[0],
     [selectedTrackId, tracks],
@@ -306,7 +360,7 @@ function AppContent() {
   const selectedClip = selectedTrack?.clips.find((clip) => clip.id === selectedClipId);
   const audioStatus = desktop.audioStatus ?? fallbackAudio;
   const modeLabel = (value: Mode) => value === "Music" ? t("app.mode.music") : value === "SFX Lab" ? t("app.mode.sfxLab") : t("app.mode.mixer");
-  const editorLabel = (value: MusicView) => value === "Song Editor" ? t("app.editor.song") : t("app.editor.pianoRoll");
+  const editorLabel = (value: MusicView) => value === "Song Editor" ? t("app.editor.song") : value === "Piano Roll" ? t("app.editor.pianoRoll") : t("app.editor.stepSequencer");
   const browserLabel = (value: string) => ({
     Starred: t("browser.starred"), Instruments: t("browser.instruments"), "Drum kits": t("browser.drumKits"),
     "SFX recipes": t("browser.sfxRecipes"), Effects: t("browser.effects"), Samples: t("browser.samples"), Presets: t("browser.presets"),
@@ -315,7 +369,15 @@ function AppContent() {
     "Laser Pulse": t("browser.recipe.laserPulse"), "Deep Impact": t("browser.recipe.deepImpact"),
     "Fast Whoosh": t("browser.recipe.fastWhoosh"), "Soft UI Click": t("browser.recipe.softUiClick"), "Rain Ambience": t("browser.recipe.rainAmbience"),
   })[value] ?? value;
-  const projectSnapshot = useMemo(() => buildProjectSnapshot(projectBase, bpm, tracks, pianoNotes), [bpm, pianoNotes, projectBase, tracks]);
+  const projectSnapshot = useMemo(() => buildProjectSnapshot(projectBase, bpm, tracks, pianoNotes, stepPattern), [bpm, pianoNotes, projectBase, stepPattern, tracks]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const timer = window.setTimeout(() => {
+      void writeRecoveryJournal(projectSnapshot).catch(() => undefined);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [dirty, projectSnapshot]);
 
   const loadProjectIntoUi = useCallback((project: Project) => {
     setProjectBase(project);
@@ -332,12 +394,25 @@ function AppContent() {
     }
     const loadedNotes = project.tracks[0]?.pattern.notes.map(pianoNoteFromProject);
     setPianoNotes(loadedNotes ?? []);
+    const resetStepPattern = createDefaultStepPattern(16);
+    stepHistory.current.reset(resetStepPattern);
+    setStepPattern(resetStepPattern);
     setProjectLoadVersion((version) => version + 1);
   }, []);
 
-  const announce = useCallback((message: string) => {
-    setToast(message);
-  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    recoverProject().then((project) => {
+      if (!cancelled && project) {
+        loadProjectIntoUi(project);
+        setDirty(true);
+        announce(t("status.recovered"));
+      }
+    }).catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [announce, loadProjectIntoUi, t]);
 
   const markDirty = useCallback((message: string) => {
     setDirty(true);
@@ -465,14 +540,62 @@ function AppContent() {
     announce(`Laser seed ${seed} frozen to the timeline`);
   };
 
-  const togglePlay = () => {
-    setPlaying((value) => !value);
-    announce(playing ? t("status.transportPaused") : t("status.transportPlaying"));
-  };
+  const sendTransportCommand = useCallback(async (command: TransportCommand) => {
+    try {
+      const status = command === "play"
+        ? (!transportPrepared
+          ? await startTransport(projectSnapshot, null, audioStatus.sampleRate || projectSnapshot.sampleRate, audioStatus.bufferSize || 256)
+          : await transportPlay())
+        : command === "pause" ? await transportPause() : await transportStop();
+      if (command === "play") setTransportPrepared(true);
+      setDesktop((current) => ({ ...current, audioStatus: status, error: undefined }));
+    } catch {
+      announce(t("status.audioUnavailable"));
+      setPlaying(false);
+      if (command === "play") setTransportPrepared(false);
+    }
+  }, [announce, audioStatus.bufferSize, audioStatus.sampleRate, projectSnapshot, t, transportPrepared]);
+
+  const togglePlay = useCallback(() => {
+    const nextPlaying = !playing;
+    setPlaying(nextPlaying);
+    announce(nextPlaying ? t("status.transportPlaying") : t("status.transportPaused"));
+    void sendTransportCommand(nextPlaying ? "play" : "pause");
+  }, [announce, playing, sendTransportCommand, t]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+      if ((event.ctrlKey || event.metaKey) && !usesNativeHistoryKey(event.target)) {
+        const key = event.key.toLowerCase();
+        if (key === "z") {
+          event.preventDefault();
+          if (event.shiftKey) redoStepPattern();
+          else undoStepPattern();
+          return;
+        }
+        if (key === "y") {
+          event.preventDefault();
+          redoStepPattern();
+          return;
+        }
+      }
+      if (event.code === "Space" && !usesNativeSpaceKey(event.target)) {
+        event.preventDefault();
+        togglePlay();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [redoStepPattern, togglePlay, undoStepPattern]);
 
   const resetTransport = () => {
     setPlaying(false);
     announce(t("status.transportStopped"));
+    void sendTransportCommand("stop");
   };
 
   return (
@@ -555,7 +678,7 @@ function AppContent() {
             <div>
               <div className="eyebrow">{t("app.projectDemo")}</div>
               <h1>{mode === "Music" ? editorLabel(musicView) : modeLabel(mode)}</h1>
-              {mode === "Music" && <div className="editor-view-tabs" role="tablist" aria-label={t("app.musicEditors")}>{(["Song Editor", "Piano Roll"] as const).map((view) => <button key={view} type="button" role="tab" aria-selected={musicView === view} className={musicView === view ? "active" : ""} onClick={() => setMusicView(view)}>{editorLabel(view)}</button>)}</div>}
+              {mode === "Music" && <div className="editor-view-tabs" role="tablist" aria-label={t("app.musicEditors")}>{(["Song Editor", "Piano Roll", "Step Sequencer"] as const).map((view) => <button key={view} type="button" role="tab" aria-selected={musicView === view} className={musicView === view ? "active" : ""} onClick={() => setMusicView(view)}>{editorLabel(view)}</button>)}</div>}
             </div>
             <div className="workspace-actions">
               <button type="button" className="ghost-button" onClick={() => setTemplatesOpen(true)}>◇ {t("templates.open")}</button>
@@ -565,6 +688,7 @@ function AppContent() {
           </div>
           {mode === "Music" && musicView === "Song Editor" && <SongEditor tracks={tracks} selectedTrackId={selectedTrackId} selectedClipId={selectedClipId} setSelectedTrackId={setSelectedTrackId} setSelectedClipId={setSelectedClipId} onClipDrag={moveClip} onAnnounce={announce} timelineCleared={timelineCleared} onClear={() => { setTracks((current) => current.map((track) => ({ ...track, clips: [] }))); setTimelineCleared(true); markDirty(t("status.timelineCleared")); }} />}
           {mode === "Music" && musicView === "Piano Roll" && <PianoRoll onDirty={markDirty} onNotesChange={setPianoNotes} externalNotes={pianoNotes} resetKey={projectLoadVersion} />}
+          {mode === "Music" && musicView === "Step Sequencer" && <StepSequencer pattern={stepPattern} dirty={dirty} playing={playing} canUndo={stepHistory.current.canUndo} canRedo={stepHistory.current.canRedo} onChange={applyStepPattern} onUndo={undoStepPattern} onRedo={redoStepPattern} onPlay={togglePlay} />}
           {mode === "SFX Lab" && <SfxLab onFreeze={freezeSfx} onAnnounce={announce} />}
           {mode === "Mixer" && <MixerFocus tracks={tracks} onMute={(id) => updateTrack(id, { muted: !tracks.find((track) => track.id === id)?.muted })} onGain={(id, gain) => updateTrack(id, { gain })} />}
         </section>
@@ -582,7 +706,7 @@ function AppContent() {
 
       {toast && <div className="toast" role="status"><span className="toast-icon">✦</span>{toast}</div>}
       {commandPaletteOpen && <CommandPalette onClose={() => setCommandPaletteOpen(false)} onPlay={togglePlay} onMode={(nextMode) => { setMode(nextMode); setCommandPaletteOpen(false); }} />}
-      <AudioSettingsDialog open={audioSettingsOpen} onClose={() => setAudioSettingsOpen(false)} currentStatus={audioStatus} onApplied={(nextAudioStatus) => setDesktop((current) => ({ ...current, audioStatus: nextAudioStatus }))} onAnnounce={announce} />
+      <AudioSettingsDialog open={audioSettingsOpen} onClose={() => setAudioSettingsOpen(false)} currentStatus={audioStatus} onApplied={(nextAudioStatus) => { setTransportPrepared(false); setDesktop((current) => ({ ...current, audioStatus: nextAudioStatus })); }} onAnnounce={announce} />
       <TemplateGallery open={templatesOpen} onClose={() => setTemplatesOpen(false)} onSelect={loadTemplate} />
     </div>
   );

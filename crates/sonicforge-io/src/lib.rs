@@ -13,6 +13,9 @@ use sonicforge_core::project::{Project, PROJECT_SCHEMA_VERSION};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
 
+pub mod journal;
+pub mod midi;
+
 const FORMAT_NAME: &str = "SonicForge Studio Project";
 const MAX_ENTRY_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES: u64 = 16 * 1024 * 1024;

@@ -39,6 +39,17 @@ cargo tauri build --bundles nsis
 
 Release 前另須驗證 `.sfsproj` save/load deep round-trip、範本載入後 ID 唯一性、儲存競態 dirty flag、四種語系、DPR 與 UI scale 100/125/150/200% 的獨立組合，以及 installer SHA-256 / Authenticode 狀態。
 
+本輪新增的實作驗收：
+
+- `cargo test --workspace`：41 個 Rust tests 通過，包含 realtime graph、transport、offline/realtime parity、MIDI golden、malformed MIDI、journal checkpoint/tail recovery。
+- `cargo clippy --workspace --all-targets -- -D warnings`：通過。
+- `cargo fmt --all --check` 與 `apps/desktop/src-tauri` 獨立 fmt：通過。
+- `corepack pnpm lint`、`typecheck`、`test`：通過；Vitest 28 tests。
+- `corepack pnpm build`：通過。
+- `corepack pnpm playwright test`：28 tests 通過，涵蓋 100/125/150/200% UI scale、四語系、Step Sequencer、Piano Roll、Project/audio controls。
+- `cargo tauri build --bundles nsis`：通過，產生 `SonicForge Studio_0.1.0_x64-setup.exe`；本機未簽章，因未提供 PFX / signtool。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sign-windows.tests.ps1`：static signing checks 通過；真實簽章僅能在受保護 GitHub Environment 執行。
+
 ## 3. 單元測試
 
 ### 時間與節拍

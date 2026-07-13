@@ -1,5 +1,30 @@
 # SonicForge Studio — 最終交付與驗收紀錄
 
+## 最新主線：Realtime authoring slice（2026-07-13）
+
+本次已修正「安裝後按播放沒有聲音」的根因：原本播放鍵只切換前端狀態，沒有建立或啟動 Rust 音訊 graph。現在 GUI 會把 Project snapshot 傳入 Tauri，於控制層建立 CPAL/WASAPI stream；callback 只執行預配置的 PlaybackEngine，透過 atomic command 接收 play、pause、stop、seek 與 loop。離線 render 與 realtime callback 共用同一個 oscillator、envelope、gain/pan、voice allocator、master limiter 路徑。
+
+本次已交付：
+
+- `crates/sonicforge-audio`：TempoClock、immutable GraphSnapshot、PlaybackController、PlaybackEngine、CPAL playback stream、offline/realtime parity tests。
+- `crates/sonicforge-io`：MIDI SMF type 0/1 import/export、tempo/PPQ/time-signature mapping、malformed input limits、deterministic golden files；bounded checksummed recovery journal、atomic checkpoint、truncated/corrupt tail recovery。
+- Tauri IPC：`transport_start/play/pause/stop`、recovery journal write/recover、MIDI bytes import/export；project save 會先保留 recovery snapshot，成功後清理 transient journal。
+- GUI：Step Sequencer 1–64 steps、velocity/probability/micro-shift/ratchet、鍵盤快捷鍵、200-op bounded history；Step pattern 會進入實際 playback Project snapshot；英／繁中／日／韓介面新增完整音序器字串。
+- Release：v* tag-only workflow、protected `release-signing` Environment、PFX secrets、SHA-256/RFC3161 signing verification 與 fail-closed gate。
+
+### 本輪驗收證據
+
+| Gate | 結果 |
+|---|---|
+| Rust workspace fmt / clippy `-D warnings` / tests | 通過；41 tests |
+| Tauri crate fmt / clippy `-D warnings` / tests | 通過；2 tests |
+| Frontend lint / typecheck / Vitest / production build | 通過；28 Vitest tests |
+| Playwright | 通過；28 tests，DPI/UI scale 100/125/150/200%、四語系、Step Sequencer、Piano Roll、audio/project controls |
+| NSIS | `cargo tauri build --bundles nsis` 通過 |
+| Signing static gate | `scripts/sign-windows.tests.ps1` 通過 |
+
+目前唯一外部阻塞是「實際憑證簽章 proof」：本機沒有 `signtool.exe`，GitHub `release-signing` Environment 尚未提供 `WINDOWS_SIGNING_PFX_BASE64` 與 `WINDOWS_SIGNING_PFX_PASSWORD`。因此本機 installer 不宣稱已簽章；tag release 會在缺少 secrets 時 fail closed，不會上傳未簽章 Windows artifact。
+
 ## 0. Desktop 0.1.0 release slice（最新交付）
 
 本節為目前狀態；後續章節保留早期 M0 / GUI vertical-slice 歷史紀錄，其「尚未實作」描述若與本節衝突，以本節及 `BUILD_VERIFICATION.md` 最新段落為準。

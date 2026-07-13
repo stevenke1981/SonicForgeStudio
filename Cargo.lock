@@ -726,6 +726,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "serde",
+ "sonicforge-core",
  "windows-core",
 ]
 

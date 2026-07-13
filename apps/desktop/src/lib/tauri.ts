@@ -198,6 +198,50 @@ export async function stopAudioDevice(): Promise<AudioStatus> {
   return hasTauriRuntime() ? invoke<AudioStatus>("stop_audio_device") : { ...fallbackAudioStatus, state: "preview-stopped" };
 }
 
+export async function startTransport(
+  project: Project,
+  deviceId: string | null,
+  sampleRate: number,
+  bufferSize: number,
+): Promise<AudioStatus> {
+  if (!hasTauriRuntime()) {
+    const device = previewDevices.find((item) => item.id === deviceId) ?? previewDevices[0];
+    return { ...fallbackAudioStatus, state: "preview-running", deviceName: device.name, sampleRate, bufferSize, engineAvailable: true };
+  }
+  return invoke<AudioStatus>("transport_start", { project, deviceId, sampleRate, bufferSize });
+}
+
+export async function transportPlay(): Promise<AudioStatus> {
+  return hasTauriRuntime() ? invoke<AudioStatus>("transport_play") : { ...fallbackAudioStatus, state: "preview-running", engineAvailable: true };
+}
+
+export async function transportPause(): Promise<AudioStatus> {
+  return hasTauriRuntime() ? invoke<AudioStatus>("transport_pause") : { ...fallbackAudioStatus, state: "preview-paused", engineAvailable: true };
+}
+
+export async function transportStop(): Promise<AudioStatus> {
+  return hasTauriRuntime() ? invoke<AudioStatus>("transport_stop") : { ...fallbackAudioStatus, state: "preview-stopped", engineAvailable: true };
+}
+
+export async function writeRecoveryJournal(project: Project): Promise<number> {
+  return hasTauriRuntime() ? invoke<number>("write_recovery_journal", { project }) : 0;
+}
+
+export async function recoverProject(): Promise<Project | null> {
+  return hasTauriRuntime() ? invoke<Project | null>("recover_project") : null;
+}
+
+export async function importMidi(bytes: Uint8Array): Promise<Project> {
+  if (!hasTauriRuntime()) throw new Error("MIDI import requires the desktop engine");
+  return invoke<Project>("import_midi", { bytes: Array.from(bytes) });
+}
+
+export async function exportMidi(project: Project, format: "type0" | "type1" = "type1"): Promise<Uint8Array> {
+  if (!hasTauriRuntime()) throw new Error("MIDI export requires the desktop engine");
+  const bytes = await invoke<number[]>("export_midi", { project, format });
+  return new Uint8Array(bytes);
+}
+
 export async function saveProject(project: Project): Promise<ProjectSummary> {
   if (hasTauriRuntime()) return invoke<ProjectSummary>("save_project", { project });
   const projects = readPreviewProjects().filter((item) => item.id !== project.id);

@@ -36,6 +36,41 @@ test("song editor and mixer expose the core workspace actions", async ({ page })
   await expect(mixerPanel.getByRole("button", { name: "Unmute Lead Synth" })).toBeVisible();
 });
 
+test("step sequencer edits 64 steps with bounded undo and transport controls", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Step Sequencer" }).click();
+  const sequencer = page.getByTestId("step-sequencer");
+  await expect(sequencer).toBeVisible();
+
+  await sequencer.getByRole("slider", { name: "Pattern length" }).fill("64");
+  await expect(sequencer.getByRole("button", { name: "Step 64 inactive" })).toBeVisible();
+
+  const stepOne = sequencer.getByRole("button", { name: /Step 1 (active|inactive)$/ });
+  await stepOne.click();
+  await expect(stepOne).toHaveAttribute("aria-pressed", "false");
+  await sequencer.getByRole("slider", { name: "Velocity" }).fill("80");
+  await sequencer.getByRole("slider", { name: "Probability" }).fill("65");
+  await sequencer.getByRole("slider", { name: "Micro-shift" }).fill("12");
+  await sequencer.getByRole("slider", { name: "Ratchet" }).fill("4");
+  await expect(sequencer.getByTestId("sequencer-dirty-state")).toHaveText("Unsaved changes");
+
+  await sequencer.getByRole("button", { name: "Undo" }).click();
+  await expect(sequencer.getByRole("slider", { name: "Ratchet" })).toHaveValue("1");
+  await sequencer.getByRole("button", { name: "Redo" }).click();
+  await expect(sequencer.getByRole("slider", { name: "Ratchet" })).toHaveValue("4");
+
+  await sequencer.getByRole("button", { name: "Undo" }).focus();
+  await page.keyboard.press("Control+Z");
+  await expect(sequencer.getByRole("slider", { name: "Ratchet" })).toHaveValue("1");
+  await page.keyboard.press("Control+Shift+Z");
+  await expect(sequencer.getByRole("slider", { name: "Ratchet" })).toHaveValue("4");
+  await page.keyboard.press("Control+Y");
+  await expect(sequencer.getByRole("slider", { name: "Ratchet" })).toHaveValue("4");
+
+  await sequencer.getByRole("button", { name: "Play pattern" }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+});
+
 test("piano roll Canvas supports editing transforms, scale, and ghost notes", async ({ page }, testInfo) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "Piano Roll" }).click();

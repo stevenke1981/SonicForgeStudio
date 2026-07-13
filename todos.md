@@ -2,9 +2,9 @@
 
 規則：只有在對應測試與證據完成後，才可將 `[ ]` 改為 `[x]`。
 
-## 本輪唯一工作項目：Desktop 0.1.0 release slice（已實作，待遠端 CI）
+## 本輪唯一工作項目：Post-0.1.0 audio / authoring / signing slice（已實作，待遠端 CI）
 
-本輪完成 Piano Roll、完整 schema v1 專案模型與 `.sfsproj` 原子存取、CPAL 即時輸出裝置控制、100–200% DPI、英／繁中／日／韓介面、五個預設範本與 NSIS release pipeline。`prototype/ui-mockup.html` 仍僅是靜態視覺參考。
+本輪在既有 GUI vertical slice 上完成 realtime transport/DSP graph playback、MIDI type 0/1、bounded crash-recovery journal、Step Sequencer 1–64 steps、bounded undo/redo、四語系顯示與 fail-closed Windows signing pipeline。`prototype/ui-mockup.html` 仍僅是靜態視覺參考。
 
 ### Acceptance criteria
 
@@ -17,6 +17,10 @@
 | GVS-M5-03 | M5 Piano Roll | Piano Roll 可完成 note 的 draw、select、erase、resize，且 UI 呈現的 command / state 與 engine-facing state 保持一致。 | [x] 通過 |
 | GVS-M5-04 | M5 navigation / input | Browser、Inspector、Command palette 與核心快捷鍵可操作；至少覆蓋 1366×768 與 100%、125%、150%、200% DPI 驗證。 | [x] 通過 |
 | GVS-M5-05 | M0/M5 evidence | 保存 Playwright 結果、必要 screenshot、失敗 log 與對應版本資訊；沒有證據不得勾選 M0/M5 GUI 項目。 | [x] 通過 |
+| AUD-01 | Realtime playback | Play 將 Project graph snapshot 傳到 Rust，CPAL callback 使用預配置 engine；play/pause/stop/seek/loop 與 offline renderer 共用 DSP 路徑。 | [x] 單元與整合 gate 通過；實體裝置 soak 待有硬體時補做 |
+| IO-01 | MIDI / recovery | MIDI SMF type 0/1 note、tempo、PPQ、malformed corpus 與 golden fixture 通過；journal 有 checksum、bounded append、checkpoint、truncated/corrupt tail recovery。 | [x] 通過 |
+| UI-01 | Step Sequencer / history | 1–64 steps、velocity、probability、micro-shift、ratchet、鍵盤操作與 200-op bounded history 通過，變更可進入 Project playback snapshot。 | [x] 通過 |
+| REL-01 | Signing gate | v* tag release 僅在 protected `release-signing` Environment 取得 PFX secrets 後簽署與驗證；缺少 PFX 時 fail closed。 | [x] workflow 通過靜態驗收；實際憑證 proof 待 secrets |
 
 ### 本輪驗收命令
 
@@ -38,8 +42,8 @@ cargo tauri build                         # passed: desktop exe
 
 ### 已知未完成範圍
 
-- CPAL 目前提供裝置列舉與即時 test-tone stream；完整 transport/DSP graph playback、MIDI、undo/redo、Step Sequencer 與 crash-recovery journal 仍未完成。
-- NSIS installer 已可建置；實際 Authenticode 需在 GitHub `release-signing` Environment 提供 PFX secrets，本機產物為未簽章。
+- 實體 Windows audio device 的長時間 soak 尚未在本機執行；目前以 callback boundary、offline/realtime parity、limiter、transport 與 device-lost tests 作為可重現證據。
+- NSIS installer 已可建置；實際 Authenticode 需在 GitHub `release-signing` Environment 提供 PFX secrets，本機沒有 `signtool.exe`，因此不能宣稱已簽章。
 - `prototype/ui-mockup.html` 不代表正式 UI framework、IPC、engine state 或 pixel-perfect implementation。
 
 ### 回滾說明
@@ -64,37 +68,37 @@ cargo tauri build                         # passed: desktop exe
 
 ## M1 Transport 與音訊核心
 
-- [ ] 定義 sample clock、tick、PPQ 與 tempo map。
-- [ ] 實作 play、pause、stop、seek。
-- [ ] 實作 loop region。
+- [x] 定義 sample clock、tick、PPQ 與 tempo map。
+- [x] 實作 play、pause、stop、seek。
+- [x] 實作 loop region。
 - [ ] 實作 lock-free SPSC command queue。
 - [ ] 實作 preallocated event queue。
-- [ ] 實作 immutable graph snapshot。
+- [x] 實作 immutable graph snapshot。
 - [ ] 實作 block-based parameter smoothing。
 - [x] 建立 CPAL device enumeration。
 - [x] 建立 WASAPI shared output。
 - [x] 建立 device change / lost handler。
 - [x] 建立 xrun counter。
-- [ ] 建立 master safety limiter。
-- [ ] 讓即時與離線共用 DSP process API。
+- [x] 建立 master safety limiter。
+- [x] 讓即時與離線共用 DSP process API。
 - [ ] 10 分鐘 soak test。
 
 ## M2 DSP 基礎
 
-- [ ] Oscillator：sine。
-- [ ] Oscillator：triangle。
-- [ ] Oscillator：saw。
-- [ ] Oscillator：square / pulse。
+- [x] Oscillator：sine。
+- [x] Oscillator：triangle。
+- [x] Oscillator：saw。
+- [x] Oscillator：square / pulse。
 - [ ] Noise：white / pink approximation。
-- [ ] ADSR envelope。
+- [x] ADSR envelope。
 - [ ] Biquad LP / HP / BP。
 - [ ] One-pole parameter smoother。
-- [ ] Gain / pan。
+- [x] Gain / pan。
 - [ ] Delay line 與 feedback clamp。
 - [ ] 3-band EQ。
 - [ ] Compressor。
 - [ ] Algorithmic reverb。
-- [ ] Soft clipper / limiter。
+- [x] Soft clipper / limiter。
 - [ ] 每個 DSP 補 impulse、silence、boundedness 測試。
 
 ## M3 樂器
@@ -150,14 +154,14 @@ cargo tauri build                         # passed: desktop exe
 - [x] Velocity lane。
 - [x] Quantize / transpose。（humanize 待後續）
 - [x] Ghost notes / scale highlight。
-- [ ] Step Sequencer 1–64 steps。
-- [ ] Probability / ratchet / micro shift。
+- [x] Step Sequencer 1–64 steps。
+- [x] Probability / ratchet / micro shift。
 - [x] Mixer strips。
 - [ ] Insert rack。
 - [ ] Sends。
 - [x] Inspector。
 - [ ] Keyboard shortcut editor。
-- [ ] Undo / redo history UI。
+- [x] Undo / redo history UI（Step Sequencer bounded 200-op history）。
 
 ## M6 專案與 I/O
 
@@ -166,12 +170,12 @@ cargo tauri build                         # passed: desktop exe
 - [x] schema migration v1 framework。
 - [x] relative asset resolver。
 - [ ] SHA-256 asset fingerprint。
-- [ ] autosave journal。
-- [ ] crash recovery UI。
+- [x] autosave journal。
+- [x] crash recovery UI。
 - [x] atomic save。
 - [ ] WAV 16/24/32f writer。
 - [ ] WAV import。
-- [ ] MIDI import / export。
+- [x] MIDI import / export（Tauri bytes API、SMF type 0/1）。
 - [ ] SF2 import。
 - [ ] portable package。
 - [ ] missing asset report。
@@ -207,7 +211,7 @@ cargo tauri build                         # passed: desktop exe
 ## M9 發布
 
 - [x] Windows NSIS installer。
-- [ ] Windows code signing（有憑證時）。
+- [x] Windows code-signing gate（有憑證時；缺憑證 fail closed）。
 - [ ] Linux package。
 - [ ] macOS bundle / notarization（有環境時）。
 - [ ] First-run audio setup。

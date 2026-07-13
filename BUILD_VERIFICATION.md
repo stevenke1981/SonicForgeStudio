@@ -1,14 +1,17 @@
 # 建置驗證狀態
 
-## Desktop 0.1.0 release slice（2026-07-13，最新）
+## Realtime authoring slice（2026-07-13，最新）
 
 本節取代下方舊的 M0 / GUI vertical-slice 未完成敘述；下方內容僅保留作為早期 baseline 紀錄。
 
 ### 已完成範圍
 
 - Rust schema v1 project model，以及受限 ZIP `.sfsproj` 的 `manifest.json` / `project.json`、golden test、原子儲存與 round-trip。
-- CPAL Windows/WASAPI 輸出裝置列舉、即時 test-tone stream、xrun 與 device-lost 狀態；callback 維持無配置、無鎖、無 blocking、無 I/O、無 panic。
-- Tauri IPC：專案 save/load/list 與音訊 device/start/stop/status；Project model 不依賴 Tauri / React。
+- CPAL Windows/WASAPI 輸出裝置列舉、Project graph playback、transport play/pause/stop/seek/loop、xrun 與 device-lost 狀態；callback 維持無配置、無鎖、無 blocking、無 I/O、無 panic。
+- Tauri IPC：專案 save/load/list、transport graph、MIDI bytes import/export、recovery journal write/recover 與音訊 device/status；Project model 不依賴 Tauri / React。
+- realtime/offline 共用 PlaybackEngine，包含 immutable GraphSnapshot、sine/triangle/saw/square oscillator、envelope、voice stealing、gain/pan 與 safety limiter。
+- MIDI SMF type 0/1、tempo/PPQ/time-signature、malformed input limits 與 deterministic golden fixtures；bounded checksummed recovery journal、atomic checkpoint 與 corrupt/truncated tail recovery。
+- Step Sequencer 1–64、velocity/probability/micro-shift/ratchet、200-op bounded history 與 Ctrl/Cmd+Z/Y/Shift+Z。
 - Piano Roll note draw/select/erase/resize、velocity、quantize、transpose、duplicate、legato、ghost notes 與 scale highlight。
 - 英文、繁體中文、日文、韓文介面；空白、小星星、四拍鼓組、chiptune、SFX starter 五個範本。
 - Playwright 分離覆蓋 DPR 與 UI 100/125/150/200% scale。
@@ -17,8 +20,8 @@
 ### Release 邊界
 
 - 本機 NSIS 可重現建置，但目前沒有 PFX secrets，因此 Authenticode 狀態為 `NotSigned`。
-- GitHub `release-signing` Environment 僅允許 `v*` tag；加入 `WINDOWS_CERTIFICATE` 與 `WINDOWS_CERTIFICATE_PASSWORD` 後 workflow 才會簽章。
-- 完整 transport/DSP graph playback、MIDI、undo/redo、Step Sequencer、autosave journal/crash recovery 與 macOS notarization仍屬後續里程碑。
+- GitHub `release-signing` Environment 僅允許 `v*` tag；`WINDOWS_SIGNING_PFX_BASE64` 與 `WINDOWS_SIGNING_PFX_PASSWORD` 缺失時 workflow 在上傳前 fail closed。實際 PFX proof 尚未執行。
+- 實體裝置長時間 soak、ASIO/JACK、SoundFont、effects rack、macOS notarization 仍屬後續里程碑。
 
 ### 最新驗證命令
 
@@ -37,7 +40,7 @@ corepack pnpm --dir apps/desktop exec playwright test
 Push-Location apps/desktop; cargo tauri build --bundles nsis; Pop-Location
 ```
 
-最後一次 clean verification：Rust workspace 27 tests、Tauri 2 tests、frontend 21 tests、Playwright 24 tests，全數通過。NSIS installer 為 2,214,948 bytes，SHA-256 `FBEB27A6A4EA1B3ECA7BE22C5DE07DAAEAFD3BF7BB513F08053A7F7D6DACA2F9`，Authenticode `NotSigned`；完整產物表見 `final.md`。
+最後一次 clean verification：Rust workspace 41 tests、Tauri 2 tests、frontend 28 tests、Playwright 28 tests，全數通過。`cargo tauri build --bundles nsis` 成功；本機產物未簽章，因沒有 `signtool.exe` 與 PFX secrets。`scripts/sign-windows.tests.ps1` static signing checks 通過；完整狀態見 `final.md` 與 `docs/signing.md`。
 
 ## M0 baseline（2026-07-13）
 

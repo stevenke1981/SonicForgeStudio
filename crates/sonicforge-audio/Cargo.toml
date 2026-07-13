@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+sonicforge-core = { path = "../sonicforge-core" }
 
 [target.'cfg(windows)'.dependencies]
 cpal = "0.18.1"
