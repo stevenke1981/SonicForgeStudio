@@ -17,7 +17,7 @@ Ship the post-0.1.0 realtime authoring slice: audible Project playback after ins
 
 ## Pending
 
-- Commit the verified feature slice, push `main`, wait for CI and verify remote parity.
+- The verified feature slice is committed and pushed to `main`; CI and remote parity are green.
 - Do not create a release tag until protected Environment PFX secrets are supplied; actual Authenticode proof is externally blocked.
 
 ## Current blockers
@@ -26,4 +26,4 @@ Ship the post-0.1.0 realtime authoring slice: audible Project playback after ins
 
 ## Next exact action
 
-Commit the staged feature slice, push `main`, then verify CI and `git ls-remote` parity.
+Supply the protected release-signing PFX secrets, then create a version tag to exercise the fail-closed signed release workflow.
