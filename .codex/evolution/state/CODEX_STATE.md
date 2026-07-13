@@ -17,11 +17,11 @@ Ship audible SFX Lab and Mixer playback, automatic transport completion, WAV exp
 - Reviewer P1 fixes for frontend project round-trip/IDs/save race and Rust device-lost/size/durable replace integrated.
 - Realtime `GraphSnapshot`/`PlaybackEngine` and Tauri `transport_start/play/pause/stop` integrated; frontend Play now starts the real project graph.
 - MIDI type 0/1, bounded checksummed recovery journal, Step Sequencer 1–64, 200-op history and signing scripts/workflow integrated.
-- Local gates passed: workspace 41 Rust tests, Tauri 2 tests, frontend 28 Vitest tests, 28 Playwright tests, NSIS build, signing static checks.
+- Local gates passed: workspace 59 Rust tests, Tauri 5 tests, frontend 49 Vitest tests, 36 Playwright tests, NSIS build, signing static checks.
 
 ## Pending
 
-- Review the final diff, commit, push `main`, verify remote parity, and inspect GitHub CI.
+- Push commit `3ff66bc` to `main`, verify remote parity, and inspect GitHub CI.
 
 ## Current blockers
 
@@ -29,4 +29,4 @@ Ship audible SFX Lab and Mixer playback, automatic transport completion, WAV exp
 
 ## Next exact action
 
-Stage the intended delivery, commit, push `main`, verify the remote SHA, then inspect CI status.
+Push `main`, verify the remote SHA equals local HEAD, then inspect CI status.
