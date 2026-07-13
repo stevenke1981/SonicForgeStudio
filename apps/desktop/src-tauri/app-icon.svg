@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">SonicForge Studio</title>
+  <desc id="desc">A cyan SF monogram on an obsidian field.</desc>
+  <rect width="512" height="512" rx="112" fill="#091118"/>
+  <path d="M128 154h203c20 0 36 16 36 36v12H157v43h164c26 0 47 21 47 47v22c0 28-23 51-51 51H128v-48h178c8 0 14-6 14-14v-8H157c-26 0-47-21-47-47v-47c0-26 21-47 47-47h43z" fill="#60d9d2"/>
+  <path d="M259 154h94c14 0 25 11 25 25v23h-73v-15h-46zM259 314h119v23c0 16-13 29-29 29h-90z" fill="#f3b562"/>
+  <circle cx="403" cy="112" r="14" fill="#b99bff"/>
+</svg>

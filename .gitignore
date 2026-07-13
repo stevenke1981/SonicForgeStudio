@@ -5,6 +5,13 @@
 .codebase-memory/
 .opencode/
 /node_modules/
+node_modules/
+apps/desktop/dist/
+apps/desktop/artifacts/*
+!apps/desktop/artifacts/screenshots/
+!apps/desktop/artifacts/screenshots/*.png
+apps/desktop/src-tauri/target/
 *.log
 .DS_Store
 Thumbs.db
+apps/desktop/test-results/

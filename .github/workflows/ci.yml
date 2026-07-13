@@ -44,3 +44,44 @@ jobs:
           name: sonicforge-ci-demo
           path: artifacts/demo.wav
           if-no-files-found: error
+
+  desktop:
+    name: Desktop GUI checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/desktop/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Lint frontend
+        run: corepack pnpm lint
+
+      - name: Typecheck frontend
+        run: corepack pnpm typecheck
+
+      - name: Run frontend unit tests
+        run: corepack pnpm test
+
+      - name: Build frontend
+        run: corepack pnpm build
+
+      - name: Install Playwright Chromium
+        run: corepack pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser acceptance tests
+        run: corepack pnpm exec playwright test

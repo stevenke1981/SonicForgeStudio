@@ -42,3 +42,41 @@ jobs:
           name: sonicforge-${{ matrix.platform }}-${{ github.sha }}
           path: target/release/sonicforge-cli*
           if-no-files-found: error
+
+  desktop-windows:
+    name: Build desktop GUI windows-x64
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/desktop/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version 2.11.2 --locked
+
+      - name: Build Tauri desktop release
+        working-directory: apps/desktop
+        run: cargo tauri build
+
+      - name: Upload desktop executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonicforge-desktop-windows-x64-${{ github.sha }}
+          path: apps/desktop/src-tauri/target/release/sonicforge-desktop.exe
+          if-no-files-found: error

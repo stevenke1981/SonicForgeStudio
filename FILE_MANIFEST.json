@@ -1,211 +1,523 @@
 [
   {
     "path": ".gitignore",
-    "bytes": 120
+    "bytes": 315
   },
   {
-    "path": "apps/cli/Cargo.toml",
-    "bytes": 211
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-29x29@2x.png",
+    "bytes": 1078
   },
   {
-    "path": "apps/cli/src/main.rs",
-    "bytes": 1503
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-29x29@2x-1.png",
+    "bytes": 1078
   },
   {
-    "path": "apps/cli/tests/demo_smoke.rs",
-    "bytes": 2063
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-29x29@1x.png",
+    "bytes": 633
   },
   {
-    "path": "artifacts/.gitkeep",
-    "bytes": 0
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-20x20@3x.png",
+    "bytes": 1040
   },
   {
-    "path": "crates/sonicforge-core/Cargo.toml",
-    "bytes": 136
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-20x20@2x.png",
+    "bytes": 812
   },
   {
-    "path": "crates/sonicforge-core/src/lib.rs",
-    "bytes": 507
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-20x20@2x-1.png",
+    "bytes": 812
   },
   {
-    "path": "crates/sonicforge-core/src/project.rs",
-    "bytes": 3401
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-20x20@1x.png",
+    "bytes": 451
   },
   {
-    "path": "crates/sonicforge-core/src/render.rs",
-    "bytes": 9366
+    "path": "apps/desktop/src-tauri/icons/android/values/ic_launcher_background.xml",
+    "bytes": 115
   },
   {
-    "path": "crates/sonicforge-core/src/sequence.rs",
-    "bytes": 2251
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher.png",
+    "bytes": 6015
   },
   {
-    "path": "crates/sonicforge-core/src/synth.rs",
-    "bytes": 2148
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_round.png",
+    "bytes": 4290
   },
   {
-    "path": "crates/sonicforge-core/src/wav.rs",
-    "bytes": 3259
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_foreground.png",
+    "bytes": 6203
   },
   {
-    "path": "docs/acceptance-checklist.md",
-    "bytes": 723
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher.png",
+    "bytes": 4626
   },
   {
-    "path": "docs/ADR-0001-clean-room.md",
-    "bytes": 551
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_round.png",
+    "bytes": 3615
   },
   {
-    "path": "docs/ADR-0002-tauri-rust-engine.md",
-    "bytes": 640
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_foreground.png",
+    "bytes": 4727
   },
   {
-    "path": "prompts/START_CODEX.md",
-    "bytes": 695
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xhdpi/ic_launcher.png",
+    "bytes": 3109
   },
   {
-    "path": "prompts/START_OPENCODE.md",
-    "bytes": 584
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xhdpi/ic_launcher_round.png",
+    "bytes": 2421
   },
   {
-    "path": "prototype/ui-mockup.html",
-    "bytes": 6384
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-xhdpi/ic_launcher_foreground.png",
+    "bytes": 3211
   },
   {
-    "path": "schemas/project-v1.schema.json",
-    "bytes": 1406
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-mdpi/ic_launcher.png",
+    "bytes": 1683
   },
   {
-    "path": "schemas/recipe-v1.schema.json",
-    "bytes": 1213
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-mdpi/ic_launcher_round.png",
+    "bytes": 1464
   },
   {
-    "path": "scripts/build-release.ps1",
-    "bytes": 1020
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-mdpi/ic_launcher_foreground.png",
+    "bytes": 1793
   },
   {
-    "path": "scripts/build-release.sh",
-    "bytes": 613
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-hdpi/ic_launcher.png",
+    "bytes": 1747
   },
   {
-    "path": "scripts/check.ps1",
-    "bytes": 649
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-hdpi/ic_launcher_round.png",
+    "bytes": 1477
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-hdpi/ic_launcher_foreground.png",
+    "bytes": 2458
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/android/mipmap-anydpi-v26/ic_launcher.xml",
+    "bytes": 261
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/StoreLogo.png",
+    "bytes": 932
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square89x89Logo.png",
+    "bytes": 1447
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square71x71Logo.png",
+    "bytes": 1154
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square44x44Logo.png",
+    "bytes": 843
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square310x310Logo.png",
+    "bytes": 4575
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-29x29@3x.png",
+    "bytes": 1473
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square30x30Logo.png",
+    "bytes": 671
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-40x40@1x.png",
+    "bytes": 812
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-40x40@2x.png",
+    "bytes": 1281
   },
   {
     "path": "scripts/check.sh",
     "bytes": 532
   },
   {
-    "path": ".github/workflows/release.yml",
-    "bytes": 943
+    "path": "scripts/check.ps1",
+    "bytes": 649
+  },
+  {
+    "path": "scripts/build-release.sh",
+    "bytes": 613
+  },
+  {
+    "path": "scripts/build-release.ps1",
+    "bytes": 1020
+  },
+  {
+    "path": "schemas/recipe-v1.schema.json",
+    "bytes": 1213
+  },
+  {
+    "path": "schemas/project-v1.schema.json",
+    "bytes": 1406
+  },
+  {
+    "path": "prototype/ui-mockup.html",
+    "bytes": 6384
+  },
+  {
+    "path": "prompts/START_OPENCODE.md",
+    "bytes": 584
+  },
+  {
+    "path": "prompts/START_CODEX.md",
+    "bytes": 695
+  },
+  {
+    "path": "docs/ADR-0002-tauri-rust-engine.md",
+    "bytes": 640
+  },
+  {
+    "path": "docs/ADR-0001-clean-room.md",
+    "bytes": 551
+  },
+  {
+    "path": "docs/acceptance-checklist.md",
+    "bytes": 723
+  },
+  {
+    "path": "crates/sonicforge-core/src/wav.rs",
+    "bytes": 3259
+  },
+  {
+    "path": "crates/sonicforge-core/src/synth.rs",
+    "bytes": 2148
+  },
+  {
+    "path": "crates/sonicforge-core/src/sequence.rs",
+    "bytes": 2251
+  },
+  {
+    "path": "crates/sonicforge-core/src/render.rs",
+    "bytes": 9366
+  },
+  {
+    "path": "crates/sonicforge-core/src/project.rs",
+    "bytes": 3401
+  },
+  {
+    "path": "crates/sonicforge-core/src/lib.rs",
+    "bytes": 507
+  },
+  {
+    "path": "crates/sonicforge-core/Cargo.toml",
+    "bytes": 136
+  },
+  {
+    "path": "artifacts/.gitkeep",
+    "bytes": 0
+  },
+  {
+    "path": "apps/desktop/tests/app.spec.ts",
+    "bytes": 2147
+  },
+  {
+    "path": "apps/desktop/src-tauri/src/main.rs",
+    "bytes": 1315
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-83.5x83.5@2x.png",
+    "bytes": 2449
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-76x76@2x.png",
+    "bytes": 2300
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-76x76@1x.png",
+    "bytes": 1342
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-60x60@3x.png",
+    "bytes": 2725
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-60x60@2x.png",
+    "bytes": 1946
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-512@2x.png",
+    "bytes": 16554
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-40x40@3x.png",
+    "bytes": 1946
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/ios/AppIcon-40x40@2x-1.png",
+    "bytes": 1281
   },
   {
     "path": "scripts/package.ps1",
     "bytes": 411
   },
   {
+    "path": "apps/desktop/src-tauri/icons/Square284x284Logo.png",
+    "bytes": 4290
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square142x142Logo.png",
+    "bytes": 2143
+  },
+  {
+    "path": "apps/cli/src/main.rs",
+    "bytes": 1503
+  },
+  {
+    "path": "apps/cli/Cargo.toml",
+    "bytes": 211
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "bytes": 2057
+  },
+  {
     "path": ".github/workflows/ci.yml",
-    "bytes": 1006
+    "bytes": 2036
+  },
+  {
+    "path": "ui-design.md",
+    "bytes": 3544
   },
   {
     "path": "todos.md",
-    "bytes": 5349
-  },
-  {
-    "path": "AGENTS.md",
-    "bytes": 2427
-  },
-  {
-    "path": "architecture.md",
-    "bytes": 4161
-  },
-  {
-    "path": "audio-engine.md",
-    "bytes": 3259
-  },
-  {
-    "path": "BUILD_VERIFICATION.md",
-    "bytes": 2413
-  },
-  {
-    "path": "Cargo.lock",
-    "bytes": 253
-  },
-  {
-    "path": "Cargo.toml",
-    "bytes": 290
-  },
-  {
-    "path": "CONTRIBUTING.md",
-    "bytes": 780
-  },
-  {
-    "path": "FILE_MANIFEST.json",
-    "bytes": 3509
-  },
-  {
-    "path": "final.md",
-    "bytes": 4058
-  },
-  {
-    "path": "LICENSE",
-    "bytes": 1087
-  },
-  {
-    "path": "MODEL_ROUTING.md",
-    "bytes": 719
-  },
-  {
-    "path": "plan.md",
-    "bytes": 5234
-  },
-  {
-    "path": "project-format.md",
-    "bytes": 2144
-  },
-  {
-    "path": "README.md",
-    "bytes": 2928
-  },
-  {
-    "path": "references.md",
-    "bytes": 611
-  },
-  {
-    "path": "risk-register.md",
-    "bytes": 1348
-  },
-  {
-    "path": "roadmap.md",
-    "bytes": 805
-  },
-  {
-    "path": "rust-toolchain.toml",
-    "bytes": 86
-  },
-  {
-    "path": "security.md",
-    "bytes": 1523
-  },
-  {
-    "path": "spec.md",
-    "bytes": 7844
-  },
-  {
-    "path": "TEAM.md",
-    "bytes": 1080
-  },
-  {
-    "path": "test.md",
-    "bytes": 5020
+    "bytes": 9293
   },
   {
     "path": "THIRD_PARTY_NOTICES.md",
     "bytes": 669
   },
   {
-    "path": "ui-design.md",
-    "bytes": 3544
+    "path": "test.md",
+    "bytes": 5020
+  },
+  {
+    "path": "TEAM.md",
+    "bytes": 1080
+  },
+  {
+    "path": "spec.md",
+    "bytes": 7844
+  },
+  {
+    "path": "security.md",
+    "bytes": 1523
+  },
+  {
+    "path": "rust-toolchain.toml",
+    "bytes": 86
+  },
+  {
+    "path": "roadmap.md",
+    "bytes": 805
+  },
+  {
+    "path": "risk-register.md",
+    "bytes": 1348
+  },
+  {
+    "path": "references.md",
+    "bytes": 611
+  },
+  {
+    "path": "README.md",
+    "bytes": 4251
+  },
+  {
+    "path": "project-format.md",
+    "bytes": 2144
+  },
+  {
+    "path": "plan.md",
+    "bytes": 5234
+  },
+  {
+    "path": "MODEL_ROUTING.md",
+    "bytes": 719
+  },
+  {
+    "path": "LICENSE",
+    "bytes": 1087
+  },
+  {
+    "path": "final.md",
+    "bytes": 8071
+  },
+  {
+    "path": "FILE_MANIFEST.json",
+    "bytes": 10984
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "bytes": 780
+  },
+  {
+    "path": "Cargo.toml",
+    "bytes": 290
+  },
+  {
+    "path": "Cargo.lock",
+    "bytes": 253
+  },
+  {
+    "path": "BUILD_VERIFICATION.md",
+    "bytes": 5249
+  },
+  {
+    "path": "audio-engine.md",
+    "bytes": 3259
+  },
+  {
+    "path": "architecture.md",
+    "bytes": 4161
+  },
+  {
+    "path": "AGENTS.md",
+    "bytes": 2427
+  },
+  {
+    "path": "apps/cli/tests/demo_smoke.rs",
+    "bytes": 2063
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square150x150Logo.png",
+    "bytes": 2343
+  },
+  {
+    "path": "apps/desktop/eslint.config.js",
+    "bytes": 722
+  },
+  {
+    "path": "apps/desktop/package.json",
+    "bytes": 1098
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/Square107x107Logo.png",
+    "bytes": 1696
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/icon.png",
+    "bytes": 7395
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/icon.ico",
+    "bytes": 8098
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/icon.icns",
+    "bytes": 45091
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/64x64.png",
+    "bytes": 1147
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/32x32.png",
+    "bytes": 670
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/128x128@2x.png",
+    "bytes": 3686
+  },
+  {
+    "path": "apps/desktop/src-tauri/icons/128x128.png",
+    "bytes": 2039
+  },
+  {
+    "path": "apps/desktop/src-tauri/gen/schemas/windows-schema.json",
+    "bytes": 116049
+  },
+  {
+    "path": "apps/desktop/src-tauri/gen/schemas/desktop-schema.json",
+    "bytes": 116049
+  },
+  {
+    "path": "apps/desktop/src-tauri/gen/schemas/capabilities.json",
+    "bytes": 159
+  },
+  {
+    "path": "apps/desktop/src-tauri/gen/schemas/acl-manifests.json",
+    "bytes": 65934
+  },
+  {
+    "path": "apps/desktop/src-tauri/capabilities/default.json",
+    "bytes": 203
+  },
+  {
+    "path": "apps/desktop/src-tauri/tauri.conf.json",
+    "bytes": 891
+  },
+  {
+    "path": "apps/desktop/src-tauri/Cargo.toml",
+    "bytes": 563
+  },
+  {
+    "path": "apps/desktop/src-tauri/Cargo.lock",
+    "bytes": 106966
+  },
+  {
+    "path": "apps/desktop/src-tauri/build.rs",
+    "bytes": 40
+  },
+  {
+    "path": "apps/desktop/src-tauri/app-icon.svg",
+    "bytes": 656
+  },
+  {
+    "path": "apps/desktop/src/test/setup.ts",
+    "bytes": 36
+  },
+  {
+    "path": "apps/desktop/src/lib/tauri.ts",
+    "bytes": 1351
+  },
+  {
+    "path": "apps/desktop/src/styles.css",
+    "bytes": 19850
+  },
+  {
+    "path": "apps/desktop/src/main.tsx",
+    "bytes": 209
+  },
+  {
+    "path": "apps/desktop/src/App.tsx",
+    "bytes": 25686
+  },
+  {
+    "path": "apps/desktop/src/App.test.tsx",
+    "bytes": 2117
+  },
+  {
+    "path": "apps/desktop/artifacts/screenshots/gui-sfx-lab.png",
+    "bytes": 199572
+  },
+  {
+    "path": "apps/desktop/vite.config.ts",
+    "bytes": 358
+  },
+  {
+    "path": "apps/desktop/tsconfig.json",
+    "bytes": 590
+  },
+  {
+    "path": "apps/desktop/pnpm-lock.yaml",
+    "bytes": 95040
+  },
+  {
+    "path": "apps/desktop/playwright.config.ts",
+    "bytes": 626
+  },
+  {
+    "path": "apps/desktop/index.html",
+    "bytes": 359
   },
   {
     "path": "scripts/package.sh",
