@@ -2,9 +2,13 @@
 
 ## Objective
 
-Ship the post-0.1.0 realtime authoring slice: audible Project playback after installation, transport/DSP graph, MIDI, bounded recovery journal, Step Sequencer, undo/redo, signing gate, verified commit and push.
+Ship audible SFX Lab and Mixer playback, automatic transport completion, WAV export, Save As, additional music templates, verified installer, commit, and push.
 
 ## Completed
+
+- Audible SFX Lab and Mixer transport, project-end auto-stop, coherent transport polling, WAV export, user-named Save As, four new music templates, four-locale strings, and DPI toolbar fixes implemented.
+- Final local gates passed: 59 Rust workspace tests, 5 Tauri tests, 49 Vitest tests, 36 Playwright tests, frontend production build, and NSIS release build.
+- Installer: 2,326,326 bytes; SHA-256 `FAFE71E7B29C6B97C5EEB9F12145327C7B80BB61110C97D33E6793EB5B5C7881`; Authenticode `NotSigned` because no PFX is available locally.
 
 - Project/audio/I/O crates and Tauri IPC implemented.
 - Piano Roll, project controls, four locales and five starter templates implemented.
@@ -17,13 +21,12 @@ Ship the post-0.1.0 realtime authoring slice: audible Project playback after ins
 
 ## Pending
 
-- The verified feature slice is committed and pushed to `main`; CI and remote parity are green.
-- Do not create a release tag until protected Environment PFX secrets are supplied; actual Authenticode proof is externally blocked.
+- Review the final diff, commit, push `main`, verify remote parity, and inspect GitHub CI.
 
 ## Current blockers
 
-- No local `signtool.exe` and no GitHub `release-signing` PFX secrets; signing workflow is intentionally fail-closed.
+- Actual Authenticode remains externally blocked by absent PFX secrets; this does not block an explicitly `NotSigned` local installer.
 
 ## Next exact action
 
-Supply the protected release-signing PFX secrets, then create a version tag to exercise the fail-closed signed release workflow.
+Stage the intended delivery, commit, push `main`, verify the remote SHA, then inspect CI status.

@@ -2,11 +2,17 @@
 
 use std::{
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use serde::{de, Deserialize, Serialize};
-use sonicforge_audio::{AudioDeviceInfo, AudioDeviceManager, AudioStatus, GraphSnapshot};
+use sonicforge_audio::{
+    render_offline, AudioDeviceInfo, AudioDeviceManager, AudioStatus, GraphSnapshot, TransportPoll,
+};
 use sonicforge_core::project::Project;
 use sonicforge_io::{journal::RecoveryJournal, midi::MidiFormat};
 use tauri::Manager;
@@ -27,6 +33,19 @@ struct ProjectSummary {
     name: String,
     file_name: String,
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportProjectWavResult {
+    path: String,
+    file_name: String,
+    frames: u64,
+    sample_rate: u32,
+}
+
+const MAX_WAV_EXPORT_FRAMES: u64 = 50_000_000;
+static EXPORT_LOCK: Mutex<()> = Mutex::new(());
+static EXPORT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 struct BoundedMidiBytes(Vec<u8>);
 
@@ -140,6 +159,7 @@ fn transport_start(
     device_id: Option<String>,
     sample_rate: u32,
     buffer_size: u32,
+    start_position_samples: u64,
     state: tauri::State<'_, AppState>,
 ) -> Result<AudioStatus, String> {
     let requested_sample_rate = if sample_rate == 0 {
@@ -161,10 +181,15 @@ fn transport_start(
             buffer_size,
         )
         .map_err(|error| error.to_string())?;
-    audio
+    let controller = audio
         .playback_controller()
-        .ok_or_else(|| "transport graph was not created".to_owned())?
-        .play();
+        .ok_or_else(|| "transport graph was not created".to_owned())?;
+    if start_position_samples > 0 {
+        controller
+            .seek_samples(start_position_samples)
+            .map_err(|error| error.to_string())?;
+    }
+    controller.play().map_err(|error| error.to_string())?;
     Ok(audio.status())
 }
 
@@ -177,7 +202,7 @@ fn transport_play(state: tauri::State<'_, AppState>) -> Result<AudioStatus, Stri
     let controller = audio
         .playback_controller()
         .ok_or_else(|| "transport graph is not prepared".to_owned())?;
-    controller.play();
+    controller.play().map_err(|error| error.to_string())?;
     Ok(audio.status())
 }
 
@@ -188,7 +213,7 @@ fn transport_pause(state: tauri::State<'_, AppState>) -> Result<AudioStatus, Str
         .lock()
         .map_err(|_| "audio control state is unavailable".to_owned())?;
     if let Some(controller) = audio.playback_controller() {
-        controller.pause();
+        controller.pause().map_err(|error| error.to_string())?;
     }
     Ok(audio.status())
 }
@@ -200,9 +225,35 @@ fn transport_stop(state: tauri::State<'_, AppState>) -> Result<AudioStatus, Stri
         .lock()
         .map_err(|_| "audio control state is unavailable".to_owned())?;
     if let Some(controller) = audio.playback_controller() {
-        controller.stop();
+        controller.stop().map_err(|error| error.to_string())?;
     }
     Ok(audio.status())
+}
+
+#[tauri::command]
+fn transport_seek(
+    position_samples: u64,
+    state: tauri::State<'_, AppState>,
+) -> Result<AudioStatus, String> {
+    let mut audio = state
+        .audio
+        .lock()
+        .map_err(|_| "audio control state is unavailable".to_owned())?;
+    audio
+        .playback_controller()
+        .ok_or_else(|| "transport graph is not available".to_owned())?
+        .seek_samples(position_samples)
+        .map_err(|error| error.to_string())?;
+    Ok(audio.status())
+}
+
+#[tauri::command]
+fn get_transport_position(state: tauri::State<'_, AppState>) -> Result<TransportPoll, String> {
+    let mut audio = state
+        .audio
+        .lock()
+        .map_err(|_| "audio control state is unavailable".to_owned())?;
+    Ok(audio.poll_transport_position())
 }
 
 #[tauri::command]
@@ -297,6 +348,21 @@ fn export_midi(project: Project, format: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+async fn export_project_wav(
+    app: tauri::AppHandle,
+    project: Project,
+    file_name: String,
+) -> Result<ExportProjectWavResult, String> {
+    let file_name = validate_export_file_name(&file_name)?;
+    let root = export_root(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        export_project_wav_file(&root, project, &file_name)
+    })
+    .await
+    .map_err(|error| format!("WAV export task failed: {error}"))?
+}
+
+#[tauri::command]
 async fn load_project(app: tauri::AppHandle, project_id: String) -> Result<Project, String> {
     let root = project_root(&app)?;
     let file_name = project_file_name(&project_id)?;
@@ -318,6 +384,129 @@ fn project_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         .app_local_data_dir()
         .map(|path| path.join("projects"))
         .map_err(|error| format!("cannot resolve local project directory: {error}"))
+}
+
+fn export_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_local_data_dir()
+        .map(|path| path.join("exports"))
+        .map_err(|error| format!("cannot resolve local export directory: {error}"))
+}
+
+fn validate_export_file_name(file_name: &str) -> Result<String, String> {
+    if file_name.is_empty() {
+        return Err("export file name must be 1..255 bytes".to_owned());
+    }
+    if file_name
+        .chars()
+        .any(|character| character.is_whitespace() || character.is_control())
+    {
+        return Err("export file name cannot contain whitespace or control characters".to_owned());
+    }
+    if file_name.chars().any(|character| {
+        matches!(
+            character,
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'
+        )
+    }) {
+        return Err("export file name contains an unsafe path character".to_owned());
+    }
+    if file_name == "." || file_name == ".." || file_name.contains("..") {
+        return Err("export file name cannot contain path traversal".to_owned());
+    }
+    if file_name.ends_with('.') {
+        return Err("export file name cannot end with a dot".to_owned());
+    }
+
+    let normalized = match file_name.rsplit_once('.') {
+        Some((stem, extension)) if extension.eq_ignore_ascii_case("wav") && !stem.is_empty() => {
+            file_name.to_owned()
+        }
+        Some(_) => return Err("export file name must use the .wav extension".to_owned()),
+        None => format!("{file_name}.wav"),
+    };
+    if normalized.len() > 255 {
+        return Err("export file name must be 1..255 bytes including extension".to_owned());
+    }
+    let stem = normalized
+        .rsplit_once('.')
+        .map_or(normalized.as_str(), |(stem, _)| stem);
+    let device_component = stem.split('.').next().unwrap_or(stem).to_ascii_uppercase();
+    let reserved = matches!(device_component.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ["COM", "LPT"].iter().any(|prefix| {
+            device_component.strip_prefix(prefix).is_some_and(|suffix| {
+                matches!(
+                    suffix,
+                    "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
+                )
+            })
+        });
+    if reserved {
+        return Err("export file name is reserved by the operating system".to_owned());
+    }
+    Ok(normalized)
+}
+
+fn export_project_wav_file(
+    root: &Path,
+    project: Project,
+    file_name: &str,
+) -> Result<ExportProjectWavResult, String> {
+    let _export_guard = EXPORT_LOCK
+        .lock()
+        .map_err(|_| "WAV export coordinator is unavailable".to_owned())?;
+    let file_name = validate_export_file_name(file_name)?;
+    let snapshot = GraphSnapshot::from_project(&project, project.sample_rate)
+        .map_err(|error| error.to_string())?;
+    let duration_samples = snapshot.duration_samples();
+    if duration_samples == 0 {
+        return Err("cannot export an empty project".to_owned());
+    }
+    if duration_samples > MAX_WAV_EXPORT_FRAMES {
+        return Err("WAV export duration exceeds the allocation limit".to_owned());
+    }
+    let frames = usize::try_from(duration_samples)
+        .map_err(|_| "WAV export duration is not representable on this platform".to_owned())?;
+    let rendered = render_offline(snapshot.as_ref(), frames).map_err(|error| error.to_string())?;
+
+    std::fs::create_dir_all(root)
+        .map_err(|error| format!("cannot create export directory: {error}"))?;
+    let path = root.join(&file_name);
+    let unique = EXPORT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temporary_path = root.join(format!(
+        ".{file_name}.{}.{}.{}.tmp",
+        std::process::id(),
+        timestamp,
+        unique
+    ));
+    sonicforge_core::wav::write_pcm16_stereo(&temporary_path, snapshot.sample_rate(), &rendered)
+        .map_err(|error| format!("cannot write WAV export: {error}"))?;
+    if let Err(error) = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&temporary_path)
+        .and_then(|file| file.sync_all())
+    {
+        let _ = std::fs::remove_file(&temporary_path);
+        return Err(format!("cannot flush WAV export: {error}"));
+    }
+    if let Err(error) = std::fs::hard_link(&temporary_path, &path) {
+        let _ = std::fs::remove_file(&temporary_path);
+        return Err(format!(
+            "cannot finalize WAV export without overwriting an existing file: {error}"
+        ));
+    }
+    let _ = std::fs::remove_file(&temporary_path);
+
+    Ok(ExportProjectWavResult {
+        path: path.to_string_lossy().into_owned(),
+        file_name,
+        frames: duration_samples,
+        sample_rate: snapshot.sample_rate(),
+    })
 }
 
 fn recovery_journal_path(root: &Path, project_id: &str) -> Result<PathBuf, String> {
@@ -411,13 +600,16 @@ fn main() {
             transport_play,
             transport_pause,
             transport_stop,
+            transport_seek,
+            get_transport_position,
             save_project,
             load_project,
             list_projects,
             write_recovery_journal,
             recover_project,
             import_midi,
-            export_midi
+            export_midi,
+            export_project_wav
         ])
         .run(tauri::generate_context!());
 
@@ -429,9 +621,12 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use sonicforge_core::project::Project;
+    use sonicforge_core::{project::Project, sequence::NoteEvent};
 
-    use super::{list_project_files, load_project_file, project_file_name};
+    use super::{
+        export_project_wav_file, list_project_files, load_project_file, project_file_name,
+        validate_export_file_name,
+    };
 
     #[test]
     fn project_file_name_rejects_path_traversal() {
@@ -440,6 +635,72 @@ mod tests {
             project_file_name("safe-project"),
             Ok("safe-project.sfsproj".to_owned())
         );
+    }
+
+    #[test]
+    fn export_file_name_validation_rejects_unsafe_names() {
+        for file_name in [
+            "",
+            " ",
+            "studio mix.wav",
+            "../escape.wav",
+            "..\\escape.wav",
+            "CON.wav",
+            "com1",
+            "COM1.backup.wav",
+            "LPT9.wav",
+            "LPT².mix.wav",
+            "report.txt",
+        ] {
+            assert!(
+                validate_export_file_name(file_name).is_err(),
+                "{file_name:?} should be rejected"
+            );
+        }
+        assert_eq!(
+            validate_export_file_name("laser.wav"),
+            Ok("laser.wav".to_owned())
+        );
+        assert_eq!(
+            validate_export_file_name("laser"),
+            Ok("laser.wav".to_owned())
+        );
+    }
+
+    #[test]
+    fn export_helper_rejects_empty_graph_without_tauri_runtime() {
+        let mut project = Project::demo();
+        project.tracks[0].pattern.notes.clear();
+        let directory = tempfile::tempdir().expect("tempdir");
+
+        let error = export_project_wav_file(directory.path(), project, "empty.wav")
+            .expect_err("empty project should not export");
+        assert!(error.contains("empty project"));
+    }
+
+    #[test]
+    fn export_helper_writes_pcm16_stereo_wav_without_tauri_runtime() {
+        let mut project = Project::demo();
+        project.tracks[0].pattern.notes = vec![NoteEvent::new(0.0, 0.01, 60, 0.5)];
+        let directory = tempfile::tempdir().expect("tempdir");
+
+        let result = export_project_wav_file(directory.path(), project.clone(), "tone")
+            .expect("export helper");
+        let bytes = std::fs::read(&result.path).expect("read exported wav");
+
+        assert_eq!(result.file_name, "tone.wav");
+        assert!(result.frames > 0);
+        assert_eq!(result.sample_rate, 48_000);
+        assert_eq!(&bytes[0..4], b"RIFF");
+        assert_eq!(&bytes[8..12], b"WAVE");
+        assert_eq!(&bytes[36..40], b"data");
+        assert_eq!(bytes.len(), 44 + result.frames as usize * 4);
+        assert!(bytes[44..].iter().any(|byte| *byte != 0));
+
+        let duplicate = export_project_wav_file(directory.path(), project, "tone")
+            .expect_err("existing export must not be overwritten");
+        assert!(duplicate.contains("without overwriting"));
+        assert_eq!(std::fs::read(&result.path).expect("read original"), bytes);
     }
 
     #[test]

@@ -31,7 +31,7 @@ Audio Control Layer
   ├─ Parameter Store
   ├─ Device Manager
   └─ Snapshot Publisher
-             │ lock-free swap / SPSC
+             │ lock-free swap / bounded MPSC
              ▼
 Real-time Audio Thread
   ├─ Transport Clock
@@ -114,7 +114,7 @@ CPAL → WASAPI / ASIO / ALSA / JACK / CoreAudio
 
 ### Control → audio
 
-- SPSC ring buffer：transport、note、small parameter event。
+- Bounded MPSC command queue：多個 control-side producer 提交 transport、note 與 small parameter event；audio callback 是唯一 consumer，每個 block 有固定處理上限。
 - Atomic scalar：少量高頻 macro parameter。
 - ArcSwap / epoch snapshot：graph replacement；真正釋放在非 audio thread。
 

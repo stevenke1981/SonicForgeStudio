@@ -1,5 +1,28 @@
 # 建置驗證狀態
 
+## Audible SFX／Mixer、transport completion、export／save-as（2026-07-14，最新）
+
+- Rust workspace fmt、Clippy `-D warnings` 通過；59 tests 通過（audio 26、CLI WAV smoke 1、core 19、I/O 13）。
+- Tauri crate fmt、Clippy `-D warnings` 通過；5 tests 通過。
+- Frontend lint、typecheck、production build 通過；Vitest 49 tests 通過。
+- Playwright 36 tests 通過；100/125/150/200% 均涵蓋 SFX 五種 recipe、Mixer transport、Save As、WAV export、九個 templates、多語系、Piano Roll、Step Sequencer 與 movable playhead。
+- Audio callback 維持無配置、鎖、blocking、I/O、panic；note-event 工作量以固定 256-frame engine quantum 限制，dense output 不依 callback buffer size 改變。
+- Transport 自動在 project end 停止並以 sequence snapshot 發布 position/state；loop clamp 至 duration，尾端 Play 從頭重啟。
+- WAV export 在 blocking worker 序列化執行，拒絕危險／保留檔名與同名覆寫，使用 unique temporary、`sync_all` 與 no-clobber finalize；輸出測試確認 RIFF/WAVE header 與非靜音 PCM data。
+- `cargo tauri build --bundles nsis` 通過；installer 2,326,326 bytes，SHA-256 `FAFE71E7B29C6B97C5EEB9F12145327C7B80BB61110C97D33E6793EB5B5C7881`，Authenticode `NotSigned`（本機無 PFX）。
+
+## Factory instruments / movable playhead（2026-07-13，最新）
+
+- Rust workspace fmt、Clippy `-D warnings` 通過；workspace 54 tests 通過。
+- Tauri crate fmt、Clippy `-D warnings` 通過；2 tests 通過。
+- Frontend lint、typecheck、production build 通過；Vitest 42 tests 通過。
+- Playwright 32 tests 通過；新增 factory instruments、pointer/keyboard seek 與 transport position 測試，涵蓋 UI scale 100/125/150/200%。
+- Audio engine 為 10 種 preset 建立實際 DSP 差異與 drum-kit note dispatch；callback 未新增配置、鎖、blocking 或 I/O。
+- Transport 使用固定容量 64-slot MPSC command queue 保留 stop/play/seek 順序；callback 每個 block 最多處理 16 個命令並只做一次 seek reset。Graph build 每 64 notes 預建 exact voice-slot checkpoint，因此 100,000-note sparse seek 最多 replay 63 events，且不會讓已被 voice stealing 取代的長音錯誤復活。percussion 使用 absolute-sample phase/noise，seek/loop 與 continuous render 對齊，polling 會消費 device-lost 狀態。
+- GUI 使用實際 transport sample rate 換算播放頭；factory device parameters 不再於 save/load 清空，Piano Roll／Step Sequencer 綁定選取軌道，播放中修改 graph 會先停止舊 transport。Step 編輯只重建實際變更的 step，保留和弦、第一小節後音符及 16→64 resolution 變更前的音樂時間。
+- 本輪未變更 project schema；新 device ID 為 `instrument-<track-id>`，仍可讀舊冒號格式。
+- `cargo tauri build --bundles nsis` 通過；installer 2,308,159 bytes，SHA-256 `B0AE118A4748BD118A2DBD961A50735746008AFDECB6D0D614BB4E7E1C4573FF`，Authenticode `NotSigned`（本機無 PFX）。
+
 ## Realtime authoring slice（2026-07-13，最新）
 
 本節取代下方舊的 M0 / GUI vertical-slice 未完成敘述；下方內容僅保留作為早期 baseline 紀錄。
@@ -40,7 +63,7 @@ corepack pnpm --dir apps/desktop exec playwright test
 Push-Location apps/desktop; cargo tauri build --bundles nsis; Pop-Location
 ```
 
-最後一次 clean verification：Rust workspace 41 tests、Tauri 2 tests、frontend 28 tests、Playwright 28 tests，全數通過。`cargo tauri build --bundles nsis` 成功；本機產物未簽章，因沒有 `signtool.exe` 與 PFX secrets。`scripts/sign-windows.tests.ps1` static signing checks 通過；完整狀態見 `final.md` 與 `docs/signing.md`。
+最後一次 clean verification：Rust workspace 54 tests、Tauri 2 tests、frontend 42 tests、Playwright 32 tests，全數通過。`cargo tauri build --bundles nsis` 成功；本機產物未簽章，因沒有 `signtool.exe` 與 PFX secrets。`scripts/sign-windows.tests.ps1` static signing checks 通過；完整狀態見 `final.md` 與 `docs/signing.md`。
 
 ## M0 baseline（2026-07-13）
 

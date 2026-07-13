@@ -1,5 +1,25 @@
 # SonicForge Studio — 最終交付與驗收紀錄
 
+## 最新主線：全介面可發聲、播放完成、WAV 匯出與九個範本（2026-07-14）
+
+SFX Lab 的 Laser Pulse、Deep Impact、Fast Whoosh、Soft UI Click、Rain Ambience 現在都有實際 Preview／Stop，會建立合法 Project snapshot 並走與 Music 相同的 Rust `GraphSnapshot`／`PlaybackEngine`／CPAL 路徑。Mixer 也具 Play／Pause／Stop；mute 或 gain 變更會停止舊 graph，下一次播放使用更新後的完整 Project，不再是只有視覺狀態。
+
+非 loop 播放抵達 project duration 時會由 audio consumer 自動發布 `stopped`，GUI polling 隨即恢復 Play；在尾端再按 Play 會從開頭重播。transport position/state 使用 sequence publication 保持同一 callback snapshot；loop 會 clamp 至 project duration。密集事件以固定 256-frame engine quantum 限制工作量，且 offline/realtime 不受裝置 callback buffer 邊界影響。
+
+已新增 WAV 匯出與真正的另存新檔。WAV 由 blocking render worker 使用共用 engine 產生非靜音 stereo PCM16，檔名會拒絕 traversal、Windows reserved names、空／過大輸出與同名覆寫；寫入使用唯一 temporary、flush/sync 與 no-clobber finalize。Save As 可輸入新名稱與安全 ID，保留原專案並切換至新專案。範本由五個擴充為九個，新增 Piano Ballad、Bass Groove、Synthwave、Cinematic，四語系鍵完整。
+
+最終 Gate：Rust workspace 59 tests、Tauri 5 tests、Vitest 49 tests、Playwright 36 tests、frontend production build 與 NSIS release build 全部通過。Windows installer 位於 `apps/desktop/src-tauri/target/release/bundle/nsis/SonicForge Studio_0.1.0_x64-setup.exe`，2,326,326 bytes，SHA-256 `FAFE71E7B29C6B97C5EEB9F12145327C7B80BB61110C97D33E6793EB5B5C7881`。本機未提供 PFX，Authenticode 如實為 `NotSigned`；實際簽章仍需 GitHub protected `release-signing` Environment 的憑證 secrets。
+
+## 最新主線：Factory instruments 與可移動播放頭（2026-07-13）
+
+已修正使用者看到的三個直接問題：Music Browser 現在有明確的「新增樂器」入口；新增後會建立含示範音符的可播放軌道；橘色播放頭可在時間軸點擊／拖曳、使用鍵盤移動，播放時會依 Rust callback 公布的 sample position 前進。
+
+內建 10 種 factory presets：Analog Lead、Warm Pad、Electric Bass、Soft Keys、Bell、Pluck、Drum Kit、Kick、Snare、Hi-Hat。這些不是只改名稱：Rust 共用 realtime/offline PlaybackEngine 會依 Project device kind 選擇不同 oscillator、envelope、noise 與鼓組 MIDI note 分派；不加入第三方音訊素材，也不變更 project schema。
+
+驗收包含 Rust realtime boundary、每種音色 finite/non-silent/distinct buffer、舊專案 device ID 相容、GUI 新增／切換／保存、播放頭 seek／position sync，以及四種 UI scale。獨立審查發現並修正 transport 命令失序、MPSC producer 競態、callback 無上限 command drain、長專案 seek 掃描、percussion seek 不一致、device-lost polling、裝置取樣率換算、device parameters 遺失、播放中 graph 失同步、editor ownership，以及 Step Sequencer 破壞和弦／長樂段的問題。實體音訊裝置的主觀音色與長時間 soak 仍需在有對應硬體時補做，不能以自動測試冒充硬體聽測。
+
+Windows installer 位於 `apps/desktop/src-tauri/target/release/bundle/nsis/SonicForge Studio_0.1.0_x64-setup.exe`，2,308,159 bytes，SHA-256 `B0AE118A4748BD118A2DBD961A50735746008AFDECB6D0D614BB4E7E1C4573FF`。本機沒有 PFX，因此 Authenticode 狀態仍為 `NotSigned`。
+
 ## 最新主線：Realtime authoring slice（2026-07-13）
 
 本次已修正「安裝後按播放沒有聲音」的根因：原本播放鍵只切換前端狀態，沒有建立或啟動 Rust 音訊 graph。現在 GUI 會把 Project snapshot 傳入 Tauri，於控制層建立 CPAL/WASAPI stream；callback 只執行預配置的 PlaybackEngine，透過 atomic command 接收 play、pause、stop、seek 與 loop。離線 render 與 realtime callback 共用同一個 oscillator、envelope、gain/pan、voice allocator、master limiter 路徑。
@@ -16,10 +36,10 @@
 
 | Gate | 結果 |
 |---|---|
-| Rust workspace fmt / clippy `-D warnings` / tests | 通過；41 tests |
+| Rust workspace fmt / clippy `-D warnings` / tests | 通過；54 tests |
 | Tauri crate fmt / clippy `-D warnings` / tests | 通過；2 tests |
-| Frontend lint / typecheck / Vitest / production build | 通過；28 Vitest tests |
-| Playwright | 通過；28 tests，DPI/UI scale 100/125/150/200%、四語系、Step Sequencer、Piano Roll、audio/project controls |
+| Frontend lint / typecheck / Vitest / production build | 通過；42 Vitest tests |
+| Playwright | 通過；32 tests，DPI/UI scale 100/125/150/200%、四語系、Step Sequencer、Piano Roll、audio/project controls |
 | NSIS | `cargo tauri build --bundles nsis` 通過 |
 | Signing static gate | `scripts/sign-windows.tests.ps1` 通過 |
 

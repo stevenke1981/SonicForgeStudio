@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../i18n";
 import { createDemoProject } from "../lib/tauri";
@@ -41,5 +41,39 @@ describe("ProjectControls save concurrency", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /^Save$/ })).toBeEnabled());
 
     expect(onDirtyChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it("saves a user-named copy and switches to the new project", async () => {
+    const project = createDemoProject();
+    const saveProjectAction = vi.fn(async (copy: typeof project): Promise<ProjectSummary> => ({
+      id: copy.id,
+      name: copy.name,
+      fileName: `${copy.id}.sfsproj`,
+    }));
+    const onProjectLoaded = vi.fn();
+    const onDirtyChange = vi.fn();
+    render(
+      <I18nProvider initialLocale="en">
+        <ProjectControls
+          project={project}
+          dirty
+          onProjectLoaded={onProjectLoaded}
+          onDirtyChange={onDirtyChange}
+          onAnnounce={vi.fn()}
+          saveProjectAction={saveProjectAction}
+        />
+      </I18nProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save As" }));
+    const dialog = screen.getByRole("dialog", { name: "Save project as" });
+    fireEvent.change(screen.getByRole("textbox", { name: "Project name" }), { target: { value: "Night Sketch" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Safe project ID" }), { target: { value: "night-sketch" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save As" }));
+
+    await waitFor(() => expect(saveProjectAction).toHaveBeenCalled());
+    expect(saveProjectAction.mock.calls[0][0]).toMatchObject({ id: "night-sketch", name: "Night Sketch" });
+    expect(onProjectLoaded).toHaveBeenCalledWith(expect.objectContaining({ id: "night-sketch", name: "Night Sketch" }));
+    expect(onDirtyChange).toHaveBeenCalledWith(false);
   });
 });

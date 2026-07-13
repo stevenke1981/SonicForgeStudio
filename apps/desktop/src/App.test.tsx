@@ -32,6 +32,185 @@ describe("SonicForge Studio GUI shell", () => {
     await waitFor(() => expect(screen.getByRole("spinbutton", { name: "SFX seed" })).toBeInTheDocument());
   });
 
+  it("previews and stops every built-in SFX recipe through the shared transport", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole("tab", { name: /SFX Lab/i }));
+    const recipes = [
+      ["laserPulse", "Laser Pulse"],
+      ["deepImpact", "Deep Impact"],
+      ["fastWhoosh", "Fast Whoosh"],
+      ["softUiClick", "Soft UI Click"],
+      ["rainAmbience", "Rain Ambience"],
+    ] as const;
+
+    for (const [id, label] of recipes) {
+      const card = screen.getByTestId(`sfx-recipe-${id}`);
+      fireEvent.click(within(card).getByRole("button", { name: `Preview ${label}` }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument());
+      fireEvent.click(within(card).getByRole("button", { name: `Stop ${label}` }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument());
+    }
+  });
+
+  it("controls the current project from Mixer transport", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole("tab", { name: /Mixer/i }));
+    const mixer = screen.getByTestId("mixer-panel");
+    fireEvent.click(within(mixer).getByRole("button", { name: /Play/i }));
+    await waitFor(() => expect(within(mixer).getByText(/playing/i)).toBeInTheDocument());
+    fireEvent.click(within(mixer).getByRole("button", { name: /Pause/i }));
+    await waitFor(() => expect(within(mixer).getByText(/ready/i)).toBeInTheDocument());
+    fireEvent.click(within(mixer).getByRole("button", { name: /Play/i }));
+    fireEvent.click(within(mixer).getByRole("button", { name: /Stop/i }));
+    await waitFor(() => expect(within(mixer).getByText(/ready/i)).toBeInTheDocument());
+  });
+
+  it("exports the current project to a WAV result", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /Export WAV/ }));
+    const dialog = screen.getByRole("dialog", { name: "Export WAV" });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Safe file name" }), {
+      target: { value: "my-song" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Export WAV" }));
+
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Export complete"));
+    expect(within(dialog).getByRole("status")).toHaveTextContent("browser-preview://exports/my-song.wav");
+  });
+
+  it("adds factory instruments with playable patterns and switches the selected track sound", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("song-editor")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Add instrument/ }));
+    const picker = screen.getByRole("dialog", { name: "Add a playable instrument" });
+    expect(within(picker).getAllByRole("button", { name: /^Add / })).toHaveLength(10);
+    fireEvent.click(within(picker).getByRole("button", { name: "Add Bell" }));
+
+    expect(screen.getByLabelText("Song editor timeline").querySelector(".track-label.selected")).toHaveTextContent("Bell");
+    const instrument = screen.getByRole("combobox", { name: "Track instrument" });
+    expect(instrument).toHaveValue("bell");
+    fireEvent.click(screen.getByRole("tab", { name: "Piano Roll" }));
+    await waitFor(() => expect(screen.getByTestId("note-count")).toHaveTextContent("4 NOTES"));
+    fireEvent.change(instrument, { target: { value: "warm-pad" } });
+    expect(instrument).toHaveValue("warm-pad");
+    expect(screen.getByText("Track sound changed to Warm Pad")).toBeInTheDocument();
+    expect(screen.getByLabelText("Project save status")).toHaveTextContent("Unsaved changes");
+  });
+
+  it("keeps instrument picker focus modal and restores the trigger on Escape", async () => {
+    render(<App />);
+    const trigger = screen.getByRole("button", { name: /Add instrument/ });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const picker = screen.getByRole("dialog", { name: "Add a playable instrument" });
+    await waitFor(() => expect(picker).toHaveFocus());
+    fireEvent.keyDown(picker, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a playable instrument" })).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("preserves melodic pitches when the selected track is edited in Step Sequencer", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Add instrument/ }));
+    const picker = screen.getByRole("dialog", { name: "Add a playable instrument" });
+    fireEvent.click(within(picker).getByRole("button", { name: "Add Bell" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Step Sequencer" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Velocity" }), { target: { value: "80" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(screen.getByLabelText("Project save status")).toHaveTextContent("Saved"));
+
+    const saved = await loadProject("sonicforge-demo");
+    const bell = saved.tracks.find((track) => track.name === "Bell");
+    expect(bell?.pattern.notes.map((note) => note.midiNote)).toEqual([72, 76, 79, 84]);
+  });
+
+  it("changes sequencer resolution without moving or replacing existing notes", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /Add instrument/ }));
+    const picker = screen.getByRole("dialog", { name: "Add a playable instrument" });
+    fireEvent.click(within(picker).getByRole("button", { name: "Add Bell" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(screen.getByLabelText("Project save status")).toHaveTextContent("Saved"));
+    const before = await loadProject("sonicforge-demo");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Step Sequencer" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Pattern length" }), { target: { value: "64" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(screen.getByLabelText("Project save status")).toHaveTextContent("Saved"));
+
+    const after = await loadProject("sonicforge-demo");
+    expect(after.tracks.find((track) => track.name === "Bell")?.pattern.notes)
+      .toEqual(before.tracks.find((track) => track.name === "Bell")?.pattern.notes);
+  });
+
+  it("edits only the selected sequencer step while preserving chords and notes after bar one", async () => {
+    const outsideNote = { startBeat: 8, lengthBeats: 2.5, midiNote: 72, velocity: 0.41 };
+    const project: Project = {
+      schemaVersion: 1,
+      id: "sequencer-preservation",
+      name: "Sequencer Preservation",
+      sampleRate: 48_000,
+      ppq: 960,
+      bpm: 120,
+      tempoMap: [{ tick: 0, bpm: 120 }],
+      timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+      tracks: [{
+        id: "pad",
+        name: "Pad",
+        kind: "instrument",
+        color: "#b99aff",
+        gain: 0.8,
+        pan: 0,
+        muted: false,
+        solo: false,
+        armed: false,
+        pattern: {
+          lengthBeats: 16,
+          notes: [
+            { startBeat: 0, lengthBeats: 4, midiNote: 48, velocity: 0.46 },
+            { startBeat: 0, lengthBeats: 4, midiNote: 55, velocity: 0.46 },
+            { startBeat: 0, lengthBeats: 4, midiNote: 60, velocity: 0.46 },
+            { startBeat: 0, lengthBeats: 4, midiNote: 64, velocity: 0.46 },
+            outsideNote,
+          ],
+        },
+        clips: [],
+        waveform: "triangle",
+      }],
+      devices: [{ id: "instrument-pad", kind: "builtin.instrument.warm-pad", parameters: {} }],
+      automation: [],
+      assets: [],
+    };
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify([project]));
+    render(<App />);
+
+    const picker = screen.getByRole("combobox", { name: "Saved projects" });
+    await waitFor(() => expect(picker).toBeEnabled());
+    fireEvent.change(picker, { target: { value: project.id } });
+    fireEvent.click(screen.getByRole("button", { name: /^Open$/ }));
+    await screen.findByText("Loaded Sequencer Preservation");
+    fireEvent.click(screen.getByRole("tab", { name: "Step Sequencer" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Velocity" }), { target: { value: "80" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(screen.getByLabelText("Project save status")).toHaveTextContent("Saved"));
+
+    const saved = await loadProject(project.id);
+    const notes = saved.tracks[0]?.pattern.notes ?? [];
+    expect(notes.filter((note) => note.startBeat === 0).map((note) => note.midiNote)).toEqual([48, 55, 60, 64]);
+    expect(notes.find((note) => note.startBeat === outsideNote.startBeat)).toEqual(outsideNote);
+  });
+
+  it("moves the playhead with keyboard seeking", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("song-editor")).toBeInTheDocument());
+    const playhead = screen.getByTestId("playhead");
+    expect(playhead).toHaveAttribute("aria-valuenow", "0");
+    fireEvent.keyDown(playhead, { key: "ArrowRight" });
+    expect(playhead).toHaveAttribute("aria-valuenow", "0.25");
+    fireEvent.keyDown(playhead, { key: "End" });
+    expect(playhead).toHaveAttribute("aria-valuenow", "40");
+  });
+
   it("opens the command palette from the visible shortcut button", async () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Open command palette" }));
@@ -62,7 +241,9 @@ describe("SonicForge Studio GUI shell", () => {
     }
 
     fireEvent.keyDown(document.body, { key: " ", code: "Space" });
-    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument());
+    fireEvent.keyDown(document.body, { key: " ", code: "Space" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument());
   });
 
   it("focuses and closes audio settings with Escape, then restores focus", async () => {
@@ -163,7 +344,10 @@ describe("SonicForge Studio GUI shell", () => {
         clips: [{ id: "original-clip", name: "Original Clip", startTick: 37, lengthTicks: 9_601, patternId: null, loopEnabled: false }],
         waveform: "triangle",
       }],
-      devices: [{ id: "device-one", kind: "builtin.synth", parameters: { cutoff: 0.42 } }],
+      devices: [
+        { id: "device-one", kind: "builtin.synth", parameters: { cutoff: 0.42 } },
+        { id: "instrument-custom-lead", kind: "builtin.instrument.warm-pad", parameters: { attack: 0.37, spread: 0.61 } },
+      ],
       automation: [{ target: "device-one.cutoff", points: [{ tick: 0, value: 0.1 }, { tick: 480, value: 0.9 }] }],
       assets: [{ id: "asset-one", kind: "audio", path: "samples/kick.wav", sha256: "abc123", size: 42 }],
     };

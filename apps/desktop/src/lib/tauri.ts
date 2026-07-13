@@ -16,6 +16,21 @@ export interface AudioStatus {
   engineAvailable: boolean;
 }
 
+export type TransportState = "stopped" | "playing" | "paused" | string;
+
+export interface TransportPosition {
+  positionSamples: number;
+  transportState: TransportState;
+  deviceState: string;
+  durationSamples: number;
+}
+
+export interface ExportWavResult {
+  path: string;
+  frames: number;
+  sampleRate: number;
+}
+
 export interface AudioDeviceInfo {
   id: string;
   name: string;
@@ -113,6 +128,35 @@ const previewDevices: AudioDeviceInfo[] = [
   { id: "studio-interface", name: "Studio Interface 1–2", host: "WASAPI", sampleRate: 96_000, channels: 2, isDefault: false },
 ];
 
+let previewTransportState: "stopped" | "playing" | "paused" = "stopped";
+let previewTransportPositionSamples = 0;
+let previewTransportSampleRate = 48_000;
+let previewTransportStartedAt = 0;
+let previewTransportDurationSamples = 0;
+let previewTransportDeviceState = "stopped";
+
+function currentPreviewTransportPosition(): number {
+  if (previewTransportState !== "playing") return previewTransportPositionSamples;
+  const elapsedMilliseconds = Math.max(0, performance.now() - previewTransportStartedAt);
+  const position = previewTransportPositionSamples + Math.round(elapsedMilliseconds * previewTransportSampleRate / 1_000);
+  if (previewTransportDurationSamples > 0 && position >= previewTransportDurationSamples) {
+    previewTransportPositionSamples = previewTransportDurationSamples;
+    previewTransportState = "stopped";
+    previewTransportDeviceState = "ready";
+    return previewTransportDurationSamples;
+  }
+  return position;
+}
+
+export function getProjectDurationSamples(project: Project, sampleRate = project.sampleRate): number {
+  const noteEnd = project.tracks.flatMap((track) => track.pattern.notes)
+    .reduce((maximum, note) => Math.max(maximum, note.startBeat + note.lengthBeats), 0);
+  const clipEnd = project.tracks.flatMap((track) => track.clips)
+    .reduce((maximum, clip) => Math.max(maximum, clip.startTick + clip.lengthTicks), 0) / Math.max(1, project.ppq);
+  const durationBeats = Math.max(1, noteEnd, clipEnd);
+  return Math.max(1, Math.ceil(durationBeats * 60 / Math.max(20, project.bpm) * sampleRate));
+}
+
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: unknown;
@@ -168,7 +212,7 @@ export function createDemoProject(): Project {
       clips: [{ id: "lead-pattern-01", name: "Lead Pattern 01", startTick: 0, lengthTicks: 7680, patternId: "lead-pattern", loopEnabled: true }],
       waveform: "saw",
     }],
-    devices: [],
+    devices: [{ id: "instrument-lead-synth", kind: "builtin.instrument.analog-lead", parameters: {} }],
     automation: [],
     assets: [],
   };
@@ -203,24 +247,112 @@ export async function startTransport(
   deviceId: string | null,
   sampleRate: number,
   bufferSize: number,
+  startPositionSamples = 0,
 ): Promise<AudioStatus> {
   if (!hasTauriRuntime()) {
     const device = previewDevices.find((item) => item.id === deviceId) ?? previewDevices[0];
+    previewTransportSampleRate = sampleRate;
+    previewTransportDurationSamples = getProjectDurationSamples(project, sampleRate);
+    previewTransportPositionSamples = Math.max(0, startPositionSamples);
+    previewTransportStartedAt = performance.now();
+    previewTransportState = "playing";
+    previewTransportDeviceState = "ready";
     return { ...fallbackAudioStatus, state: "preview-running", deviceName: device.name, sampleRate, bufferSize, engineAvailable: true };
   }
-  return invoke<AudioStatus>("transport_start", { project, deviceId, sampleRate, bufferSize });
+  return invoke<AudioStatus>("transport_start", { project, deviceId, sampleRate, bufferSize, startPositionSamples });
 }
 
 export async function transportPlay(): Promise<AudioStatus> {
-  return hasTauriRuntime() ? invoke<AudioStatus>("transport_play") : { ...fallbackAudioStatus, state: "preview-running", engineAvailable: true };
+  if (hasTauriRuntime()) return invoke<AudioStatus>("transport_play");
+  currentPreviewTransportPosition();
+  if (previewTransportDurationSamples > 0 && previewTransportPositionSamples >= previewTransportDurationSamples) {
+    previewTransportPositionSamples = 0;
+  }
+  if (previewTransportState !== "playing") {
+    previewTransportStartedAt = performance.now();
+    previewTransportState = "playing";
+    previewTransportDeviceState = "ready";
+  }
+  return { ...fallbackAudioStatus, state: "preview-running", sampleRate: previewTransportSampleRate, engineAvailable: true };
 }
 
 export async function transportPause(): Promise<AudioStatus> {
-  return hasTauriRuntime() ? invoke<AudioStatus>("transport_pause") : { ...fallbackAudioStatus, state: "preview-paused", engineAvailable: true };
+  if (hasTauriRuntime()) return invoke<AudioStatus>("transport_pause");
+  previewTransportPositionSamples = currentPreviewTransportPosition();
+  previewTransportState = "paused";
+  previewTransportDeviceState = "ready";
+  return { ...fallbackAudioStatus, state: "preview-paused", sampleRate: previewTransportSampleRate, engineAvailable: true };
 }
 
 export async function transportStop(): Promise<AudioStatus> {
-  return hasTauriRuntime() ? invoke<AudioStatus>("transport_stop") : { ...fallbackAudioStatus, state: "preview-stopped", engineAvailable: true };
+  if (hasTauriRuntime()) return invoke<AudioStatus>("transport_stop");
+  previewTransportPositionSamples = 0;
+  previewTransportState = "stopped";
+  previewTransportDeviceState = "stopped";
+  return { ...fallbackAudioStatus, state: "preview-stopped", sampleRate: previewTransportSampleRate, engineAvailable: true };
+}
+
+export async function transportSeek(positionSamples: number): Promise<AudioStatus> {
+  const boundedPosition = Math.max(0, Math.round(positionSamples));
+  if (hasTauriRuntime()) return invoke<AudioStatus>("transport_seek", { positionSamples: boundedPosition });
+  previewTransportPositionSamples = boundedPosition;
+  previewTransportStartedAt = performance.now();
+  return {
+    ...fallbackAudioStatus,
+    state: `preview-${previewTransportState}`,
+    sampleRate: previewTransportSampleRate,
+    engineAvailable: true,
+  };
+}
+
+function normalizeTransportPosition(raw: unknown): TransportPosition {
+  if (typeof raw === "number") {
+    return {
+      positionSamples: raw,
+      transportState: "playing",
+      deviceState: "unknown",
+      durationSamples: previewTransportDurationSamples,
+    };
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    positionSamples: Number(value.positionSamples ?? value.position_samples ?? 0),
+    transportState: String(value.transportState ?? value.transport_state ?? "stopped").toLowerCase(),
+    deviceState: String(value.deviceState ?? value.device_state ?? "unknown"),
+    durationSamples: Number(value.durationSamples ?? value.duration_samples ?? 0),
+  };
+}
+
+export async function getTransportPosition(): Promise<TransportPosition> {
+  if (hasTauriRuntime()) return normalizeTransportPosition(await invoke<TransportPosition | number>("get_transport_position"));
+  return {
+    positionSamples: currentPreviewTransportPosition(),
+    transportState: previewTransportState,
+    deviceState: previewTransportDeviceState,
+    durationSamples: previewTransportDurationSamples,
+  };
+}
+
+export function isSafeFileName(value: string): boolean {
+  return /^(?=.{1,64}$)[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value) && value !== "." && value !== "..";
+}
+
+export async function exportProjectWav(project: Project, fileName: string, sampleRate = project.sampleRate): Promise<ExportWavResult> {
+  const normalizedFileName = fileName.trim().replace(/\.wav$/i, "");
+  if (!isSafeFileName(normalizedFileName)) throw new Error("Use a safe file name with letters, numbers, dots, dashes, or underscores.");
+  if (hasTauriRuntime()) {
+    const raw = await invoke<Record<string, unknown>>("export_project_wav", { project, fileName: normalizedFileName, sampleRate });
+    return {
+      path: String(raw.path ?? raw.filePath ?? raw.file_path ?? `${normalizedFileName}.wav`),
+      frames: Number(raw.frames ?? raw.frameCount ?? raw.frame_count ?? 0),
+      sampleRate: Number(raw.sampleRate ?? raw.sample_rate ?? sampleRate),
+    };
+  }
+  return {
+    path: `browser-preview://exports/${normalizedFileName}.wav`,
+    frames: getProjectDurationSamples(project, sampleRate),
+    sampleRate,
+  };
 }
 
 export async function writeRecoveryJournal(project: Project): Promise<number> {

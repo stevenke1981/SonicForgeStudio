@@ -36,6 +36,37 @@ test("song editor and mixer expose the core workspace actions", async ({ page })
   await expect(mixerPanel.getByRole("button", { name: "Unmute Lead Synth" })).toBeVisible();
 });
 
+test("factory instruments create audible project tracks and the playhead seeks", async ({ page }, testInfo) => {
+  const uiScale = testInfo.project.name.replace("dpi-", "");
+  const scaleFactor = Number(uiScale) / 100;
+  await page.setViewportSize({ width: Math.round(1440 * scaleFactor), height: Math.round(1000 * scaleFactor) });
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "UI scale" }).selectOption(uiScale);
+  await page.getByRole("button", { name: "Add instrument" }).click();
+  const picker = page.getByRole("dialog", { name: "Add a playable instrument" });
+  await expect(picker.getByRole("button", { name: /^Add / })).toHaveCount(10);
+  await picker.getByRole("button", { name: "Add Drum Kit" }).click();
+  await expect(page.locator(".track-label.selected")).toContainText("Drum Kit");
+  await expect(page.getByRole("combobox", { name: "Track instrument" })).toHaveValue("drum-kit");
+
+  const timeline = page.getByLabel("Song editor timeline");
+  const box = await timeline.boundingBox();
+  if (!box) throw new Error("timeline has no layout box");
+  await timeline.click({ position: { x: (116 + 64 * 5) * scaleFactor, y: Math.min(180 * scaleFactor, box.height / 2) } });
+  const playhead = page.getByTestId("playhead");
+  await expect(playhead).toHaveAttribute("aria-valuenow", "20");
+  await playhead.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(playhead).toHaveAttribute("aria-valuenow", "20.25");
+  await page.keyboard.press("Home");
+  await expect(playhead).toHaveAttribute("aria-valuenow", "0");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect.poll(async () => Number(await playhead.getAttribute("aria-valuenow"))).toBeGreaterThan(0);
+  await page.getByRole("combobox", { name: "Track instrument" }).selectOption("bell");
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+});
+
 test("step sequencer edits 64 steps with bounded undo and transport controls", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "Step Sequencer" }).click();
@@ -165,4 +196,40 @@ test("language switch and public-domain templates update the visible project", a
   if (testInfo.project.name === "dpi-100") {
     await page.screenshot({ path: testInfo.outputPath("multilingual-templates.png"), fullPage: true });
   }
+});
+
+test("SFX, Mixer, Save As, WAV export, and expanded templates are usable", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "SFX Lab" }).click();
+  const recipes = ["Laser Pulse", "Deep Impact", "Fast Whoosh", "Soft UI Click", "Rain Ambience"];
+  for (const recipe of recipes) {
+    await page.getByRole("button", { name: `Preview ${recipe}` }).click();
+    await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: `Stop ${recipe}` }).click();
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  }
+
+  await page.getByRole("tab", { name: "Mixer" }).click();
+  const mixer = page.getByTestId("mixer-panel");
+  await mixer.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(mixer.locator(".mixer-transport-state")).toHaveText("PLAYING");
+  await mixer.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(mixer.locator(".mixer-transport-state")).toHaveText("READY");
+
+  await page.getByRole("button", { name: "Save As", exact: true }).click();
+  const saveAs = page.getByRole("dialog", { name: "Save project as" });
+  await saveAs.getByRole("textbox", { name: "Project name" }).fill("E2E Copy");
+  await saveAs.getByRole("textbox", { name: "Safe project ID" }).fill("e2e-copy");
+  await saveAs.getByRole("button", { name: "Save As", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Saved projects" })).toHaveValue("e2e-copy");
+
+  await page.getByRole("button", { name: /Export WAV/ }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export WAV" });
+  await exportDialog.getByRole("textbox", { name: "Safe file name" }).fill("e2e-render");
+  await exportDialog.getByRole("button", { name: "Export WAV", exact: true }).click();
+  await expect(exportDialog.getByRole("status")).toContainText("browser-preview://exports/e2e-render.wav");
+  await exportDialog.getByRole("button", { name: "Close export", exact: true }).first().click();
+
+  await page.getByRole("button", { name: /Templates/ }).click();
+  await expect(page.getByRole("dialog", { name: "Start from a template" }).locator(".template-card")).toHaveCount(9);
 });
