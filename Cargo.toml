@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "crates/sonicforge-core",
+    "crates/sonicforge-audio",
+    "crates/sonicforge-io",
     "apps/cli",
 ]
 resolver = "2"

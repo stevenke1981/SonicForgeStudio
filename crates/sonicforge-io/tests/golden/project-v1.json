@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "golden-v1",
+  "name": "Golden Project V1",
+  "sampleRate": 48000,
+  "ppq": 960,
+  "bpm": 120.0,
+  "tempoMap": [{ "tick": 0, "bpm": 120.0 }],
+  "timeSignatures": [{ "tick": 0, "numerator": 4, "denominator": 4 }],
+  "tracks": [],
+  "devices": [],
+  "automation": [],
+  "assets": []
+}

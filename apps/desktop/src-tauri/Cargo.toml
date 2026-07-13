@@ -17,7 +17,13 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+sonicforge-audio = { path = "../../../crates/sonicforge-audio" }
+sonicforge-core = { path = "../../../crates/sonicforge-core" }
+sonicforge-io = { path = "../../../crates/sonicforge-io" }
 tauri = { version = "2", features = [] }
+
+[dev-dependencies]
+tempfile = "3.27"
 
 [lints.rust]
 unsafe_code = "forbid"

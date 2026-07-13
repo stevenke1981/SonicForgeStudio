@@ -1,4 +1,7 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NoteEvent {
     pub start_beat: f64,
     pub length_beats: f64,
@@ -18,7 +21,8 @@ impl NoteEvent {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Pattern {
     pub length_beats: f64,
     pub notes: Vec<NoteEvent>,

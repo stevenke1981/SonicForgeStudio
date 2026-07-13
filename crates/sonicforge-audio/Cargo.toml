@@ -1,0 +1,17 @@
+[package]
+name = "sonicforge-audio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+cpal = "0.18.1"
+# CPAL 0.18 accepts both 0.61 and 0.62, but its generated `windows` bindings
+# must use the same windows-core ABI as Tauri/Wry in the desktop process.
+windows-core = "=0.61.2"
